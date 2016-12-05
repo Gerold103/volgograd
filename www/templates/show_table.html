@@ -1,0 +1,161 @@
+{% extends "base.html" %}
+
+{% block title %}ВолКомХоз: Таблица за день{% end %}
+
+{% block body %}
+	<div class="container-fluid report_title">
+		<h1>Сводные данные о работе котельных  МУП "Волгоградское коммунальное хозяйство</h1>
+		<span class="date">
+			<span class="glyphicon glyphicon-calendar" aria-hidden="true"></span> {{ data['date'] }}
+		</span>
+	</div>
+	<div class="container weather_panel">
+		<div class="panel panel-default">
+			<div class="panel-body">
+				<table class="table">
+					<tbody>
+						<tr>
+							<td>Прогноз на <u>{{ data['forecast_date'] }}</u></td>
+							<td>{{ data['forecast_weather'] }} {{ data['forecast_direction'] }}</td>
+							<td>T<sub>день</sub> = {{ data['forecast_temp_day_from'] }} ~ {{ data['forecast_temp_day_to'] }} C<sup>o</sup></td>
+							<td>T<sub>ночь</sub> = {{ data['forecast_temp_night_from'] }} ~ {{ data['forecast_temp_night_to'] }} C<sup>o</sup></td>
+						</tr>
+						<tr>
+							<td>Заданная температура воздуха</td>
+							<td>t<sub>день</sub> = {{ data['expected_temp_air_day'] }} C<sup>o</sup></td>
+							<td>t<sub>ночь</sub> = {{ data['expected_temp_air_night'] }} C<sup>o</sup></td>
+							<td>t<sub>средняя</sub> = {{ data['expected_temp_air_all_day'] }} C<sup>o</sup></td>
+						</tr>
+						<tr>
+							<td>Средняя температура</td>
+							<td>t<sub>возд.</sub> = {{ data['temp_average_air'] }} C<sup>o</sup></td>
+							<td>t<sub>воды</sub> = {{ data['temp_average_water'] }} C<sup>o</sup></td>
+							<td><td>
+						</tr>
+					</tbody>
+				</table>
+			</div>
+		</div>
+	</div>
+	<div class="container boiler_rooms_table" align="center">
+		<table class="table table-bordered table-striped table-hover">
+			<thead>
+			    <tr align="center">
+			        <td rowspan="4">Район</td>
+
+			        <td rowspan="3" colspan="2">Расчетный<br>температурный<br>график</td>
+
+			        <td rowspan="4">Котельная</td>
+
+			        <td rowspan="4">P<br>газа</td>
+
+			        <td rowspan="2" colspan="5">Котлы</td>
+
+			        <td rowspan="2" colspan="3">Сетевые насосы</td>
+
+			        <td colspan="4">Среднесуточная температура</td>
+
+			        <td colspan="4">Температура ночью</td>
+
+			        <td rowspan="2" colspan="2">Давление в сети</td>
+
+			        <td rowspan="2" colspan="2">Расход воды в час</td>
+
+			        <td rowspan="2" colspan="4">Расход подпиточной воды</td>
+
+			        <td rowspan="4" class="rotate"><div>Жесткость</div></td>
+
+			        <td rowspan="4" class="rotate"><div>Прозрачность</div></td>
+			    </tr>
+			    <tr align="center">
+			        <td rowspan="2" colspan="2">Заданная</td>
+			        <td rowspan="2" colspan="2">Фактическая</td>
+
+			        <td rowspan="2" colspan="2">Заданная</td>
+			        <td rowspan="2" colspan="2">Фактическая</td>
+			    </tr>
+			    <tr align="center">
+			        <td rowspan="2" class="rotate"><div>Всего</div></td>
+			        <td colspan="2">В работе</td>
+			        <td rowspan="2" class="rotate"><div>Резерв</div></td>
+			        <td rowspan="2" class="rotate"><div>Ремонт</div></td>
+
+			        <td rowspan="2" class="rotate"><div>В работе</div></td>
+			        <td rowspan="2" class="rotate"><div>Резерв</div></td>
+			        <td rowspan="2" class="rotate"><div>Ремонт</div></td>
+
+			        <td rowspan="2">P<sub>1</sub></td>
+			        <td rowspan="2">P<sub>2</sub></td>
+
+			        <td rowspan="2">Расч.</td>
+			        <td rowspan="2">Факт.</td>
+
+			        <td rowspan="2">Расч.</td>
+			        <td colspan="3">Фактический</td>
+			    </tr>
+			    <tr align="center">
+			        <td>T<sub>1</sub></td>
+			        <td>T<sub>2</sub></td>
+
+			        <td class="rotate"><div>Котлов</div></td>
+			        <td class="rotate"><div>Горелок</div></td>
+
+			        <td>T<sub>1</sub></td>
+			        <td>T<sub>2</sub></td>
+			        <td>T<sub>3</sub></td>
+			        <td>T<sub>4</sub></td>
+
+			        <td>T<sub>1</sub></td>
+			        <td>T<sub>2</sub></td>
+			        <td>T<sub>3</sub></td>
+			        <td>T<sub>4</sub></td>
+
+			        <td>на 6:00</td>
+			        <td>за сутки</td>
+			        <td>месяц</td>
+			    </tr>
+			</thead>
+			<tbody>
+				{% for district in data['districts'] %}
+					{% for room in district['rooms'] %}
+						<tr>
+							{% if room['district'] %}
+								<td rowspan="{{ len(district['rooms']) }}">{{ room['district'] }}</td>
+							{% end %}
+							<td>{{ room['T1'] }}</td>
+							<td>{{ room['T2'] }}</td>
+							<td>{{ room['name'] }}</td>
+							<td>{{ room['gas_pressure'] }}</td>
+							<td>{{ room['boilers_all'] }}</td>
+							<td>{{ room['boilers_in_use'] }}</td>
+							<td>{{ room['torchs_in_use'] }}</td>
+							<td>{{ room['boilers_reserve'] }}</td>
+							<td>{{ room['boilers_in_repair'] }}</td>
+							<td>{{ room['net_pumps_in_work'] }}</td>
+							<td>{{ room['net_pumps_reserve'] }}</td>
+							<td>{{ room['net_pumps_in_repair'] }}</td>
+							<td>{{ room['all_day_expected_temp1'] }}</td>
+							<td>{{ room['all_day_expected_temp2'] }}</td>
+							<td>{{ room['all_day_real_temp1'] }}</td>
+							<td>{{ room['all_day_real_temp2'] }}</td>
+							<td>{{ room['all_night_expected_temp1'] }}</td>
+							<td>{{ room['all_night_expected_temp2'] }}</td>
+							<td>{{ room['all_night_real_temp1'] }}</td>
+							<td>{{ room['all_night_real_temp2'] }}</td>
+							<td>{{ room['net_pressure1'] }}</td>
+							<td>{{ room['net_pressure2'] }}</td>
+							<td>{{ room['net_water_consum_expected_ph'] }}</td>
+							<td>{{ room['net_water_consum_real_ph'] }}</td>
+							<td>{{ room['make_up_water_consum_expected_ph'] }}</td>
+							<td>{{ room['make_up_water_consum_real_ph'] }}</td>
+							<td>{{ room['make_up_water_consum_real_pd'] }}</td>
+							<td>{{ room['make_up_water_consum_real_pm'] }}</td>
+							<td>{{ room['hardness'] }}</td>
+							<td>{{ room['transparency'] }}</td>
+						</tr>
+					{% end %}
+				{% end %}
+			</tbody>
+		</table>
+	</div>
+{% end %}

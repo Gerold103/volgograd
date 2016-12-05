@@ -1,0 +1,57 @@
+.report_title h1, .upload_file_title h1 {
+	font-size: 25px;
+}
+
+.report_title .date {
+	font-size: 18px;
+}
+
+.weather_panel {
+	margin: 20px;
+	padding: 0px;
+}
+
+.weather_panel .table {
+	margin: 0px;
+}
+
+.table > tbody > tr > td {
+     vertical-align: middle;
+}
+
+.table > thead > tr > td {
+     vertical-align: middle;
+}
+
+td.rotate {
+	padding: 0px !important;
+}
+
+td.rotate > div {
+  -webkit-transform: rotate(-90deg);
+  -moz-transform: rotate(-90deg);
+  -ms-transform: rotate(-90deg);
+  -o-transform: rotate(-90deg);
+  transform: rotate(-90deg);
+
+  white-space: nowrap;
+}
+
+.boiler_rooms_table {
+	font-size: 12px;
+	overflow: scroll;
+	border: 2px solid black;
+	padding: 10px;
+}
+
+.boiler_rooms_table thead {
+	font-weight: bold;
+}
+
+.main-menu .btn {
+	max-width: 400px;
+}
+
+.main-menu a {
+	padding: 40px;
+}

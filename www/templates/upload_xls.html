@@ -1,0 +1,17 @@
+{% extends "base.html" %}
+
+{% block title %}ВолКомХоз: Загрузить таблицу{% end %}
+
+{% block body %}
+	<div class="container-fluid upload_file_title">
+		<h1>Загрузить файл</h1>
+	</div>
+	<div class="container-fluid">
+		<form action="/upload" method="post" enctype="multipart/form-data">
+			<label class="btn btn-default btn-file">
+				Browse <input type="file" style="display: none;" name="xls-table">
+			</label>
+			<button type="submit" class="btn btn-default">Submit</button>
+		</form>
+	</div>
+{% end %}
