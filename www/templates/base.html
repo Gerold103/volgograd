@@ -30,7 +30,11 @@
 					</ul>
 					<p class="navbar-text">Вы вошли как <b>Владислав</b></p>
 					<form class="navbar-form navbar-left">
-						<button class="btn btn-default">Выйти/Войти</button>
+						{% if current_user %}
+							<a href="/logout" class="btn btn-default">Выйти</a>
+						{% else %}
+							<a href="/login" class="btn btn-default">Войти</a>
+						{% end %}
 					</form>
 				</div>
 			</div>

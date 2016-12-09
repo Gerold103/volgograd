@@ -9,34 +9,36 @@
 			<span class="glyphicon glyphicon-calendar" aria-hidden="true"></span> {{ data['date'] }}
 		</span>
 	</div>
-	<div class="container weather_panel">
-		<div class="panel panel-default">
-			<div class="panel-body">
-				<table class="table">
-					<tbody>
-						<tr>
-							<td>Прогноз на <u>{{ data['forecast_date'] }}</u></td>
-							<td>{{ data['forecast_weather'] }} {{ data['forecast_direction'] }}</td>
-							<td>T<sub>день</sub> = {{ data['forecast_temp_day_from'] }} ~ {{ data['forecast_temp_day_to'] }} C<sup>o</sup></td>
-							<td>T<sub>ночь</sub> = {{ data['forecast_temp_night_from'] }} ~ {{ data['forecast_temp_night_to'] }} C<sup>o</sup></td>
-						</tr>
-						<tr>
-							<td>Заданная температура воздуха</td>
-							<td>t<sub>день</sub> = {{ data['expected_temp_air_day'] }} C<sup>o</sup></td>
-							<td>t<sub>ночь</sub> = {{ data['expected_temp_air_night'] }} C<sup>o</sup></td>
-							<td>t<sub>средняя</sub> = {{ data['expected_temp_air_all_day'] }} C<sup>o</sup></td>
-						</tr>
-						<tr>
-							<td>Средняя температура</td>
-							<td>t<sub>возд.</sub> = {{ data['temp_average_air'] }} C<sup>o</sup></td>
-							<td>t<sub>воды</sub> = {{ data['temp_average_water'] }} C<sup>o</sup></td>
-							<td><td>
-						</tr>
-					</tbody>
-				</table>
+	{% if 'forecast_date' in data and data['forecast_date'] %}
+		<div class="container weather_panel">
+			<div class="panel panel-default">
+				<div class="panel-body">
+					<table class="table">
+						<tbody>
+							<tr>
+								<td>Прогноз на <u>{{ data['forecast_date'] }}</u></td>
+								<td>{{ data['forecast_weather'] }} {{ data['forecast_direction'] }}</td>
+								<td>T<sub>день</sub> = {{ data['forecast_temp_day_from'] }} ~ {{ data['forecast_temp_day_to'] }} C<sup>o</sup></td>
+								<td>T<sub>ночь</sub> = {{ data['forecast_temp_night_from'] }} ~ {{ data['forecast_temp_night_to'] }} C<sup>o</sup></td>
+							</tr>
+							<tr>
+								<td>Заданная температура воздуха</td>
+								<td>t<sub>день</sub> = {{ data['expected_temp_air_day'] }} C<sup>o</sup></td>
+								<td>t<sub>ночь</sub> = {{ data['expected_temp_air_night'] }} C<sup>o</sup></td>
+								<td>t<sub>средняя</sub> = {{ data['expected_temp_air_all_day'] }} C<sup>o</sup></td>
+							</tr>
+							<tr>
+								<td>Средняя температура</td>
+								<td>t<sub>возд.</sub> = {{ data['temp_average_air'] }} C<sup>o</sup></td>
+								<td>t<sub>воды</sub> = {{ data['temp_average_water'] }} C<sup>o</sup></td>
+								<td><td>
+							</tr>
+						</tbody>
+					</table>
+				</div>
 			</div>
 		</div>
-	</div>
+	{% end %}
 	<div class="container boiler_rooms_table" align="center">
 		<table class="table table-bordered table-striped table-hover">
 			<thead>
@@ -131,15 +133,15 @@
 							<td>{{ room['torchs_in_use'] }}</td>
 							<td>{{ room['boilers_reserve'] }}</td>
 							<td>{{ room['boilers_in_repair'] }}</td>
-							<td>{{ room['net_pumps_in_work'] }}</td>
-							<td>{{ room['net_pumps_reserve'] }}</td>
-							<td>{{ room['net_pumps_in_repair'] }}</td>
-							<td>{{ room['all_day_expected_temp1'] }}</td>
-							<td>{{ room['all_day_expected_temp2'] }}</td>
+							<td>{% if 'net_pumps_in_work' in room %} {{ room['net_pumps_in_work'] }} {% else %} - {% end %}</td>
+							<td>{% if 'net_pumps_reserve' in room %} {{ room['net_pumps_reserve'] }} {% else %} - {% end %}</td>
+							<td>{% if 'net_pumps_in_repair' in room %} {{ room['net_pumps_in_repair'] }} {% else %} - {% end %}</td>
+							<td>{% if 'all_day_expected_temp1' in room %} {{ room['all_day_expected_temp1'] }} {% else %} - {% end %}</td>
+							<td>{% if 'all_day_expected_temp2' in room %} {{ room['all_day_expected_temp2'] }} {% else %} - {% end %}</td>
 							<td>{{ room['all_day_real_temp1'] }}</td>
 							<td>{{ room['all_day_real_temp2'] }}</td>
-							<td>{{ room['all_night_expected_temp1'] }}</td>
-							<td>{{ room['all_night_expected_temp2'] }}</td>
+							<td>{% if 'all_night_expected_temp1' in room %} {{ room['all_night_expected_temp1'] }} {% else %} - {% end %}</td>
+							<td>{% if 'all_night_expected_temp2' in room %} {{ room['all_night_expected_temp2'] }} {% else %} - {% end %}</td>
 							<td>{{ room['all_night_real_temp1'] }}</td>
 							<td>{{ room['all_night_real_temp2'] }}</td>
 							<td>{{ room['net_pressure1'] }}</td>

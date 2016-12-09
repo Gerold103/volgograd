@@ -26,7 +26,7 @@ def get_int(a, row, col):
 		return None
 	return int(val)
 
-def validate_table_header(a, result):
+def validate_forecast_table_header(a, result):
 	# Check begin of the table
 	assert(get_cell(a, 5, 5) == 'котельная')
 	assert(get_cell(a, 5, 3) == 'Расчётный темпера-турный график')
@@ -76,13 +76,10 @@ def validate_table_header(a, result):
 	assert(get_cell(a, 5, 35) == 'прозрач-ность, см')
 	assert(get_cell(a, 8, 34) == 'Ж')
 
-def parse_xls(file_name):
-	wb = load_workbook(filename=file_name, data_only=True)
-	a = wb.active
+def parse_xls_with_forecast(a):
 	result = {}
 
-	assert(get_cell(a, 3, 2) == 'Сводные данные о работе котельных  МУП '\
-				    '"Волгоградское коммунальное хозяйство" за')
+	assert('Сводные данные о работе котельных' in get_cell(a, 3, 2))
 	#
 	# Form the forecast on the next day
 	#
@@ -126,14 +123,11 @@ def parse_xls(file_name):
 	#
 
 	assert(get_cell(a, 5, 2) == 'РАЙОН')
-	start = 12
+	i = 12
 	end = a.max_row - 2
-	i = start
-	assert(end > start)
-
 	ditricts = []
 
-	validate_table_header(a, result)
+	validate_forecast_table_header(a, result)
 
 	fields = ['boilers_all', 'boilers_in_use',
 		  'torchs_in_use', 'boilers_reserve', 'boilers_in_repair',
@@ -182,7 +176,7 @@ def parse_xls(file_name):
 				hardness = None
 			else:
 				hardness = get_float(a, i, 34)
-			transparency = get_cell(a, i, 34)
+			transparency = get_cell(a, i, 35)
 			if transparency == 'компл':
 				transparency = None
 			else:
@@ -198,3 +192,90 @@ def parse_xls(file_name):
 
 	result['districts'] = ditricts
 	return result
+
+def parse_xls_without_forecast(a):
+	result = {}
+
+	assert('Сводные данные о работе котельных' in get_cell(a, 1, 2))
+	result['date'] = get_cell(a, 1, 18)
+
+	#
+	# Bolier rooms
+	#
+
+	assert(get_cell(a, 2, 2) == 'РАЙОН')
+	i = 6
+	ditricts = []
+
+	fields = ['boilers_all', 'boilers_in_use',
+		  'torchs_in_use', 'boilers_reserve', 'boilers_in_repair',
+		  'all_day_real_temp1', 'all_day_real_temp2',
+		  'all_night_real_temp1', 'all_night_real_temp2',
+		  'net_pressure1', 'net_pressure2',
+		  'net_water_consum_expected_ph', 'net_water_consum_real_ph',
+		  'make_up_water_consum_expected_ph',
+		  'make_up_water_consum_real_ph',
+		  'make_up_water_consum_real_pd',
+		  'make_up_water_consum_real_pm']
+
+	end = False
+	while not end:
+	
+		# read all boiler rooms of one district
+
+		district = get_cell(a, i, 2)
+		assert(len(district) > 0)
+		cur_district = None
+		boiler_rooms = []
+		while cur_district is None:
+			if not get_cell(a, i, 3):
+				end = True
+				break
+			# read one boiler room
+
+			boiler_room = {}
+			if (len(boiler_rooms) == 0):
+				boiler_room['district'] = district
+			else:
+				boiler_room['district'] = None
+			boiler_room['T1']   = get_float(a, i, 3)
+			boiler_room['T2']   = get_float(a, i, 4)
+			boiler_room['name'] = get_cell(a, i, 5)
+			boiler_room['gas_pressure'] = get_float(a, i, 6)
+			k = 0
+			for j in range(7, 12):
+				boiler_room[fields[k]] = get_int(a, i, j)
+				k += 1
+			for j in range(12, 24):
+				boiler_room[fields[k]] = get_float(a, i, j)
+				k += 1
+			hardness = get_cell(a, i, 27)
+			if hardness == 'компл':
+				hardness = None
+			else:
+				hardness = get_float(a, i, 27)
+			transparency = get_cell(a, i, 28)
+			if transparency == 'компл':
+				transparency = None
+			else:
+				transparency = get_float(a, i, 28)
+			boiler_room['hardness']     = hardness
+			boiler_room['transparency'] = transparency
+
+			boiler_rooms.append(boiler_room)
+
+			i += 1
+			cur_district = get_cell(a, i, 2)
+		ditricts.append({'name': district, 'rooms': boiler_rooms})
+
+	result['districts'] = ditricts
+	return result
+
+def parse_xls(file):
+	wb = load_workbook(filename=file, data_only=True)
+	a = wb.active
+	if get_cell(a, 1, 2) == 'Сводные данные о работе котельных  МУП '\
+				'"ВКХ" на':
+		return parse_xls_without_forecast(a)
+	else:
+		return parse_xls_with_forecast(a);
