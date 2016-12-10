@@ -2,6 +2,7 @@
 # -*- coding: utf-8 -*-
 
 from io import BytesIO
+from datetime import datetime
 import json
 
 import tornado
@@ -27,6 +28,15 @@ pool = tormysql.helpers.ConnectionPool(
 )
 
 DUPLICATE_ERROR = 1062
+ERR_INSERT = 'Ошибка вставки данных'
+ERR_500    = 'Ошибка сервера'
+ERR_ACCESS = 'Ошибка доступа'
+ERR_LOGIN  = 'Ошибка входа'
+ERR_UPLOAD = 'Ошибка загрузки'
+ERR_404    = 'Не найдено'
+
+def err_not_specified(what):
+	return 'Не указано: {}'.format(what)
 
 CAN_UPLOAD_REPORTS = 0x01
 CAN_SEE_REPORTS = 0x02
@@ -49,6 +59,17 @@ class BaseHandler(tornado.web.RequestHandler):
 			    error_msg=e_msg)
 
 	##
+	# Render an error page, flush it to the user and then rollback
+	# transaction. Such actions sequence allows the user to avoid waiting
+	# for rollback.
+	#
+	@tornado.gen.coroutine
+	def rollback_error(self, tx, e_hdr, e_msg):
+			self.render_error(e_hdr=e_hdr, e_msg=e_msg)
+			yield self.flush()
+			yield tx.rollback()
+
+	##
 	# Check that the current use can execute specified actions.
 	# @sa CAN_... flags.
 	# @param rights Bitmask with actions flags.
@@ -60,7 +81,7 @@ class BaseHandler(tornado.web.RequestHandler):
 	def check_rights(self, rights):
 		user_rights = int(self.get_secure_cookie('rights'))
 		if not (rights & user_rights):
-			self.render_error(e_hdr='Ошибка доступа',
+			self.render_error(e_hdr=ERR_ACCESS,
 					  e_msg='Доступ запрещен')
 			return False
 		return True
@@ -136,7 +157,7 @@ class UploadHandler(BaseHandler):
 			yield self.upload_room(tx, r_id, dist_id, room)
 
 	##
-	# Upload the report table to the database.
+	# Upload the report to the database.
 	#
 	@tornado.web.authenticated
 	@tornado.gen.coroutine
@@ -144,7 +165,7 @@ class UploadHandler(BaseHandler):
 		if not self.check_rights(CAN_UPLOAD_REPORTS):
 			return
 		if 'xls-table' not in self.request.files:
-			self.render_error(e_hdr='Ошибка загрузки',
+			self.render_error(e_hdr=ERR_UPLOAD,
 					  e_msg='Не указан файл')
 			return
 		fileinfo = self.request.files['xls-table'][0]
@@ -174,108 +195,155 @@ class UploadHandler(BaseHandler):
 			for district in data['districts']:
 				yield self.upload_district(tx, report_id,
 							   district)
-			self.render('show_table.html', data=data)
+			#
+			# Get date in dd.mm.yyyy format
+			date = data['date']
+			# Create datetime python object
+			date = datetime.strptime(date, '%d.%m.%Y')
+			# Convert it to the format yyyy-mm-dd as in mysql
+			# database.
+			date = date.strftime('%Y-%m-%d')
+			self.redirect('/show_table?date={}'.format(date))
 		except Exception as e:
-			yield tx.rollback()
 			print(e)
 			if len(e.args) > 0 and e.args[0] == DUPLICATE_ERROR:
-				self.render_error(e_hdr='Ошибка вставки данных',
-						  e_msg='Запись с таким '\
-							'идентификатором уже '\
-							'существует')
+				self.rollback_error(tx,
+						    e_hdr=ERR_INSERT,
+						    e_msg='Запись с таким '\
+						    	  'идентификатором уже'\
+							  ' существует')
 			else:
-				self.render_error(e_hdr='Ошибка сервера',
-						  e_msg='На сервере произошла '\
-						  	'ошибка, обратитесь к '\
-						  	'администратору')
+				self.rollback_error(tx,
+						    e_hdr=ERR_500,
+						    e_msg='На сервере '\
+						    	  'произошла ошибка, '\
+						    	  'обратитесь к '\
+						    	  'администратору')
 		else:
 			yield tx.commit()
 
+##
+# Choose date and show page with a report table on specified date.
+#
 class ShowHandler(BaseHandler):
 	@tornado.web.authenticated
 	@tornado.gen.coroutine
 	def get(self):
 		if not self.check_rights(CAN_SEE_REPORTS):
 			return
+		#
+		# If date is not specified then choose one.
+		#
 		date = self.get_argument('date', None)
 		if not date:
 			self.render('choose_day.html')
 			return
 		tx = yield pool.begin()
 		try:
+
 			report = yield get_full_report_by_date(tx, date)
 			if not report:
-				yield tx.rollback()
-				self.render('choose_day.html')
+				self.rollback_error(tx,
+						    e_hdr=ERR_404,
+						    e_msg='Отчет за указанную '\
+						    	  'дату не найден')
 				return
 		except Exception as e:
 			yield tx.rollback()
-			print(e)
+			print('Error in ShowHandler: ', e)
 			if len(e.args) > 0 and e.args[0] == DUPLICATE_ERROR:
-				self.render('error_page.html', e_hdr='Ошибка вставки '\
-							'данных', e_msg='Запись с таким '\
-							'идентификатором уже существует')
+				self.rollback_error(e_hdr=ERR_INSERT,
+						  e_msg='Запись с таким '\
+						  	'идентификатором уже '\
+						  	'существует')
 			else:
-				self.render('error_page.html', e_hdr='Ошибка',
-							e_msg='На сервере произошла ошибка, обратитесь'\
-									  ' к администратору')
+				self.rollback_error(e_hdr=ERR_500,
+						  e_msg='На сервере произошла '\
+						  	'ошибка, обратитесь к '\
+						  	'администратору')
 		else:
 			yield tx.commit()
 			self.render('show_table.html', data=report)
 
+##
+# Login a not authorized user.
+#
 class LoginHandler(BaseHandler):
+	##
+	# Show login page, if the current user is not already authorized.
+	#
 	def get(self):
 		if self.get_current_user():
-			self.render_error(e_hdr='Ошибка входа',
-							  e_msg='Вы уже авторизованы')
+			self.render_error(e_hdr=ERR_LOGIN,
+					  e_msg='Вы уже авторизованы')
 			return
 		self.render('login.html')
 
 	@tornado.gen.coroutine
-	def rollback_error(self, tx, e_msg):
-			self.render_error(e_hdr='Ошибка входа', e_msg=e_msg)
-			yield self.flush()
-			yield tx.rollback()
-
-	@tornado.gen.coroutine
 	def post(self):
 		if self.get_current_user():
-			self.render_error(e_hdr='Ошибка входа',
-							  e_msg='Вы уже авторизованы')
+			self.render_error(e_hdr=ERR_LOGIN,
+					  e_msg='Вы уже авторизованы')
 			return
 		email = self.get_argument('email', None)
 		if not email:
-			self.render_error(e_hdr='Ошибка входа',
-							  e_msg='Не указан email')
+			self.render_error(e_hdr=ERR_LOGIN,
+					  e_msg='Не указан email')
 			return
 		password = self.get_argument('password', None)
 		if not password:
-			self.render_error(e_hdr='Ошибка входа',
-							  e_msg='Не указан пароль')
+			self.render_error(e_hdr=ERR_LOGIN,
+					  e_msg='Не указан пароль')
 			return
 		tx = yield pool.begin()
 		try:
-			user = yield get_user_by_email(tx, 'id, password, salt, rights',
-										   email)
+			#
+			# Try to find the user by specified email.
+			#
+			user = yield get_user_by_email(tx, 'id, password, '\
+						       'salt, rights', email)
 			if not user:
-				self.rollback_error(tx, e_msg='Пользователь с таким email '\
-									'не зарегистрирован')
+				self.rollback_error(tx, e_hdr=ERR_404,
+						    e_msg='Пользователь с '\
+						    	  'таким email не '\
+						    	  'зарегистрирован')
 				return
-			if not secret_conf.check_password(password, user[2], user[1]):
-				self.rollback_error(tx, e_msg='Неправильный пароль')
+			true_password = user[1]
+			salt = user[2]
+			#
+			# Check that the password is correct.
+			#
+			if not secret_conf.check_password(password, salt,
+							  true_password):
+				self.rollback_error(tx, e_hdr=ERR_ACCESS,
+						    e_msg='Неправильный пароль')
 				return
 			user_id = user[0]
 			rights = user[3]
-			self.set_secure_cookie('user_id', str(user_id), expires_days=1)
-			self.set_secure_cookie('rights', str(rights), expires_days=1)
+			#
+			# Set cookies for the current user for one day.
+			#
+			self.set_secure_cookie('user_id', str(user_id),
+					       expires_days=1)
+			#
+			# TODO: dont store rights on a client side.
+			# Rights specifies which actions the user can execute.
+			#
+			self.set_secure_cookie('rights', str(rights),
+					       expires_days=1)
 		except Exception as e:
-			self.rollback_error(tx, e_msg='На сервере произошла ошибка, '\
-								'обратитесь к администратору')
+			self.rollback_error(tx, e_hdr=ERR_500,
+					    e_msg='На сервере произошла '\
+					    	  'ошибка, обратитесь к '\
+					    	  'администратору')
 			return
 		else:
 			yield tx.commit()
 			self.redirect('/')
 
+##
+# Logout current user and delete all its cookies.
+#
 class LogoutHandler(BaseHandler):
 	def get(self):
 		self.clear_all_cookies()
