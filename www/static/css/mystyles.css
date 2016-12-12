@@ -40,6 +40,7 @@ td.rotate > div {
 .boiler_rooms_table {
 	font-size: 12px;
 	overflow: scroll;
+	overflow-x:scroll;
 	border: 2px solid black;
 	padding: 10px;
 }

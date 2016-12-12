@@ -4,11 +4,36 @@
 import tornado
 import tornado.gen
 
+boiler_room_report_cols = [
+	'T1', 'T2', 'gas_pressure',
+	'boilers_all', 'boilers_in_use', 'torchs_in_use', 'boilers_reserve',
+	'boilers_in_repair',
+	'net_pumps_in_work', 'net_pumps_reserve', 'net_pumps_in_repair',
+	'all_day_expected_temp1', 'all_day_expected_temp2',
+	'all_day_real_temp1', 'all_day_real_temp2',
+	'all_night_expected_temp1', 'all_night_expected_temp2',
+	'all_night_real_temp1', 'all_night_real_temp2',
+	'net_pressure1', 'net_pressure2',
+	'net_water_consum_expected_ph', 'net_water_consum_real_ph',
+	'make_up_water_consum_expected_ph', 'make_up_water_consum_real_ph',
+	'make_up_water_consum_real_pd', 'make_up_water_consum_real_pm',
+	'hardness', 'transparency'
+]
+
+##
+# Get a report for the specified date.
+# @param tx   Current transaction.
+# @param date Date on which need to find a report.
+# @param cols String with columns separated by commas: 'id, name, ...'.
+#
+# @retval Tuple with specified columns or the empty tuple.
+#
 @tornado.gen.coroutine
 def get_report_by_date(tx, date, cols):
 	sql = "SELECT {} FROM reports WHERE date = "\
-	      "STR_TO_DATE('{}', '%d.%m.%Y')".format(cols, date)
-	cursor = yield tx.execute(sql)
+	      "STR_TO_DATE(%s, %s)".format(cols)
+	params = (date, '%d.%m.%Y')
+	cursor = yield tx.execute(query=sql, params=params)
 	return cursor.fetchone()
 
 ##
@@ -37,6 +62,7 @@ def insert_district(tx, name):
 ##
 # Get a boiler room by the specified district identifier and the boiler room
 # name.
+# @param tx      Current transaction.
 # @param cols    String with columns separated by commas: 'id, name, ...'.
 # @param dist_id Identifier of the district - 'id' from 'districts' table.
 # @param name    Name of the boiler room.
@@ -51,65 +77,57 @@ def get_boiler_room_by_dist_and_name(tx, cols, dist_id, name):
 	cursor = yield tx.execute(query=sql, params=params)
 	return cursor.fetchone()
 
+##
+# Insert the new boiler room to the boiler rooms table.
+# @param tx      Current transaction.
+# @param dist_id Identifier of the district - 'id' from 'districts' table.
+# @param name    Name of the new boiler room.
+#
 @tornado.gen.coroutine
 def insert_boiler_room(tx, dist_id, name):
 	sql = "INSERT INTO boiler_rooms(district_id, name) "\
-	      "VALUES ({}, '{}')".format(dist_id, name)
-	yield tx.execute(sql)
-
-def get_sql_val(src, name):
-	if not name in src:
-		return 'NULL'
-	val = src[name]
-	if val is None:
-		return 'NULL'
-	else:
-		return val
+	      "VALUES (%s, %s)"
+	params = (dist_id, name)
+	yield tx.execute(query=sql, params=params)
 
 ##
 # Get a value from iterable object by name, or None, if the object doesn't
 # contain the name.
 #
 def get_safe_val(src, name):
-	print(name)
 	if not name in src:
 		return None
 	return src[name]
 
+##
+# Convert not existing and None values to '-' for html output.
+#
+def get_html_val(src, name):
+	if not name in src or src[name] is None:
+		return '-'
+	return src[name]
+
+##
+# Insert the new report about the specified boiler room.
+# @param tx        Current transaction.
+# @param src       Dictionary with the boiler room attributes.
+# @param room_id   Identifier of the boiler room - 'id' from
+#                  'boiler_rooms' table.
+# @param report_id Identifier of the report - 'id' from 'reports' table.
+#
 @tornado.gen.coroutine
 def insert_boiler_room_report(tx, src, room_id, report_id):
-	sql = "INSERT INTO boiler_room_reports VALUES (NULL, {}, {}, {}, {}, {}, "\
-		  "{}, {}, {}, {}, {}, {}, {}, {}, {}, {}, {}, {}, {}, {}, {}, {}, {},"\
-		  " {}, {}, {}, {}, {}, {}, {}, {}, {})"\
-		  .format(room_id, report_id, get_sql_val(src, 'T1'),
-		  		  get_sql_val(src, 'T2'), get_sql_val(src, 'gas_pressure'),
-		  		  get_sql_val(src, 'boilers_all'),
-		  		  get_sql_val(src, 'boilers_in_use'),
-		  		  get_sql_val(src, 'torchs_in_use'),
-		  		  get_sql_val(src, 'boilers_reserve'),
-		  		  get_sql_val(src, 'boilers_in_repair'),
-		  		  get_sql_val(src, 'net_pumps_in_work'),
-		  		  get_sql_val(src, 'net_pumps_reserve'),
-		  		  get_sql_val(src, 'net_pumps_in_repair'),
-		  		  get_sql_val(src, 'all_day_expected_temp1'),
-		  		  get_sql_val(src, 'all_day_expected_temp2'),
-		  		  get_sql_val(src, 'all_day_real_temp1'),
-		  		  get_sql_val(src, 'all_day_real_temp2'),
-		  		  get_sql_val(src, 'all_night_expected_temp1'),
-		  		  get_sql_val(src, 'all_night_expected_temp2'),
-		  		  get_sql_val(src, 'all_night_real_temp1'),
-		  		  get_sql_val(src, 'all_night_real_temp2'),
-		  		  get_sql_val(src, 'net_pressure1'),
-		  		  get_sql_val(src, 'net_pressure2'),
-		  		  get_sql_val(src, 'net_water_consum_expected_ph'),
-		  		  get_sql_val(src, 'net_water_consum_real_ph'),
-		  		  get_sql_val(src, 'make_up_water_consum_expected_ph'),
-		  		  get_sql_val(src, 'make_up_water_consum_real_ph'),
-		  		  get_sql_val(src, 'make_up_water_consum_real_pd'),
-		  		  get_sql_val(src, 'make_up_water_consum_real_pm'),
-		  		  get_sql_val(src, 'hardness'),
-		  		  get_sql_val(src, 'transparency'))
-	yield tx.execute(sql)
+	sql = 'INSERT INTO boiler_room_reports '\
+	      'VALUES (NULL, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, '\
+		       '%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, '\
+		       '%s, %s, %s, %s, %s, %s)'
+	assert(room_id)
+	assert(report_id)
+	global boiler_room_report_cols
+	params = [room_id, report_id]
+	for col in boiler_room_report_cols:
+		params.append(get_safe_val(src, col))
+	yield tx.execute(query=sql, params=params)
 
 ##
 # Insert a report to the reports table. If some columns absense then replace
@@ -117,9 +135,8 @@ def insert_boiler_room_report(tx, src, room_id, report_id):
 #
 @tornado.gen.coroutine
 def insert_report(tx, src):
-	sql = "INSERT INTO reports VALUES (NULL, STR_TO_DATE(%s, %s),"\
-		  " %s, %s, %s, %s, %s, STR_TO_DATE(%s, %s), %s, %s, "\
-		  "%s, %s, %s, %s, %s)"
+	sql = 'INSERT INTO reports VALUES (NULL, STR_TO_DATE(%s, %s), %s, %s, '\
+	      '%s, %s, %s, STR_TO_DATE(%s, %s), %s, %s, %s, %s, %s, %s, %s)'
 	params = (get_safe_val(src, 'date'),
 		  '%d.%m.%Y',
 		  get_safe_val(src, 'temp_average_air'),
@@ -138,67 +155,56 @@ def insert_report(tx, src):
 		  get_safe_val(src, 'forecast_temp_night_to'))
 	yield tx.execute(query=sql, params=params)
 
+##
+# Get all boiler room reports by the specified date, joined with corresponding
+# district and boiler room names.
+# @param tx   Current transaction.
+# @param date Date by which need to find all reports.
+#
+# @retval Array of tuples.
+#
 @tornado.gen.coroutine
 def get_full_report_by_date(tx, date):
-	sql = "SELECT * FROM reports WHERE date = STR_TO_DATE('{}', "\
-		  "'%Y-%m-%d')".format(date)
-	cursor = yield tx.execute(sql)
+	sql = 'SELECT * FROM reports WHERE date = STR_TO_DATE(%s, %s)'
+	params = (date, '%Y-%m-%d')
+	cursor = yield tx.execute(query=sql, params=params)
 	report = cursor.fetchone()
 	if not report:
 		return None
 	rep_id = report[0]
-	sql = "SELECT districts.name, boiler_rooms.name, T1, T2, gas_pressure, "\
-		  "boilers_all, boilers_in_use, torchs_in_use, boilers_reserve, "\
-		  "boilers_in_repair, net_pumps_in_work, net_pumps_reserve, "\
-		  "net_pumps_in_repair, all_day_expected_temp1, "\
-		  "all_day_expected_temp2, all_day_real_temp1, all_day_real_temp2, "\
-		  "all_night_expected_temp1, all_night_expected_temp2, "\
-		  "all_night_real_temp1, all_night_real_temp2, net_pressure1, "\
-		  "net_pressure2, net_water_consum_expected_ph, "\
-		  "net_water_consum_real_ph, make_up_water_consum_expected_ph, "\
-		  "make_up_water_consum_real_ph, make_up_water_consum_real_pd, "\
-		  "make_up_water_consum_real_pm, hardness, transparency "\
-		  "FROM districts JOIN boiler_rooms "\
-		  "ON(districts.id = boiler_rooms.district_id) JOIN "\
-		  "boiler_room_reports ON (boiler_room_reports.boiler_room_id = "\
-		  "boiler_rooms.id AND boiler_room_reports.report_id = {})"\
-		  .format(rep_id)
+	sql = 'SELECT districts.name, boiler_rooms.name, {} '\
+	      'FROM districts JOIN boiler_rooms '\
+	      'ON(districts.id = boiler_rooms.district_id) '\
+	      'JOIN boiler_room_reports '\
+	      'ON (boiler_room_reports.boiler_room_id = '\
+		  'boiler_rooms.id AND boiler_room_reports.report_id = {})'\
+	      .format(",".join(boiler_room_report_cols), rep_id)
 	cursor = yield tx.execute(sql)
+	#
+	# First, create a dictionary of the following format:
+	#
+	# {
+	#     'district1': [room1, room2, ...],
+	#     'district2': [room3, room4, ...],
+	#     ....
+	# }
 	districts = {}
 	next_row = cursor.fetchone()
 	while next_row:
 		dist_name = next_row[0]
+		#
+		# If it is first room for this district, then create a list
+		# for it. Else - use existing.
+		#
 		if dist_name not in districts:
 			districts[dist_name] = []
 		rooms = districts[dist_name]
-		rooms.append({'name': next_row[1], 'T1': next_row[2], 'T2': next_row[3],
-					  'gas_pressure': next_row[4], 'boilers_all': next_row[5],
-					  'boilers_in_use': next_row[6],
-					  'torchs_in_use': next_row[7],
-					  'boilers_reserve': next_row[8],
-					  'boilers_in_repair': next_row[9],
-					  'net_pumps_in_work': next_row[10],
-					  'net_pumps_reserve': next_row[11],
-					  'net_pumps_in_repair': next_row[12],
-					  'all_day_expected_temp1': next_row[13],
-					  'all_day_expected_temp2': next_row[14],
-					  'all_day_real_temp1': next_row[15],
-					  'all_day_real_temp2': next_row[16],
-					  'all_night_expected_temp1': next_row[17],
-					  'all_night_expected_temp2': next_row[18],
-					  'all_night_real_temp1': next_row[19],
-					  'all_night_real_temp2': next_row[20],
-					  'net_pressure1': next_row[21],
-					  'net_pressure2': next_row[22],
-					  'net_water_consum_expected_ph': next_row[23],
-					  'net_water_consum_real_ph': next_row[24],
-					  'make_up_water_consum_expected_ph': next_row[25],
-					  'make_up_water_consum_real_ph': next_row[26],
-					  'make_up_water_consum_real_pd': next_row[27],
-					  'make_up_water_consum_real_pm': next_row[28],
-					  'hardness': next_row[29],
-					  'transparency': next_row[30]
-					 })
+		next_report = {'name': next_row[1]}
+		i = 2
+		for col in boiler_room_report_cols:
+			next_report[col] = next_row[i]
+			i += 1
+		rooms.append(next_report)
 		next_row = cursor.fetchone()
 	result = {}
 	result['date'] = report[1]
@@ -216,7 +222,7 @@ def get_full_report_by_date(tx, date):
 	result['forecast_temp_night_from'] = report[13]
 	result['forecast_temp_night_to'] = report[14]
 	result['districts'] = []
-	for dist, rooms in districts.items():
+	for dist, rooms in sorted(districts.items(), key=lambda x: x[0]):
 		district = {'name': dist}
 		rooms[0]['district'] = dist
 		for i in range(1, len(rooms)):
@@ -225,14 +231,26 @@ def get_full_report_by_date(tx, date):
 		result['districts'].append(district)
 	return result
 
+##
+# Get a user by the specified email.
+# @param tx    Current transaction.
+# @param cols  String with columns separated by commas: 'id, name, ...'.
+# @param email Email of the user.
+#
+# @retval Tuple with specified columns or the empty tuple.
+#
 @tornado.gen.coroutine
 def get_user_by_email(tx, cols, email):
-	sql = "SELECT {} FROM users WHERE email = '{}'".format(cols, email)
-	cursor = yield tx.execute(sql)
+	sql = "SELECT {} FROM users WHERE email = %s".format(cols)
+	params = (email)
+	cursor = yield tx.execute(query=sql, params=params)
 	return cursor.fetchone()
 
+##
+# Insert the user to the users table.
+#
 @tornado.gen.coroutine
 def insert_user(tx, email, pass_hash):
-	sql = "INSERT INTO users(email, pass_hash) "\
-		  "VALUES ('{}', '{}')".format(email, pass_hash)
-	yield tx.execute(sql)
+	sql = "INSERT INTO users(email, pass_hash) VALUES (%s, %s)"
+	params = (email, pass_hash)
+	yield tx.execute(query=sql, params=params)

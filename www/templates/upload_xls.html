@@ -9,9 +9,18 @@
 	<div class="container-fluid">
 		<form action="/upload" method="post" enctype="multipart/form-data">
 			<label class="btn btn-default btn-file">
-				Browse <input type="file" style="display: none;" name="xls-table">
+				Browse <input type="file" style="display: none;" name="xls-table" id="xls-table">
 			</label>
 			<button type="submit" class="btn btn-default">Submit</button>
 		</form>
 	</div>
+	<script type="text/javascript">
+		var table = document.getElementById('xls-table');
+		table.onchange = function(e) {
+			var target = e.target;
+			if (!target.value) {
+			}
+			console.log(e.target.value);
+		};
+	</script>
 {% end %}

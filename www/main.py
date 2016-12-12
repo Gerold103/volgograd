@@ -3,7 +3,9 @@
 
 from io import BytesIO
 from datetime import datetime
+from zipfile import BadZipFile
 import json
+import argparse
 
 import tornado
 import tornado.ioloop
@@ -49,7 +51,15 @@ class BaseHandler(tornado.web.RequestHandler):
 	# User cookies are: user_id, rights. This methods return user_id.
 	#
 	def get_current_user(self):
-		return self.get_secure_cookie("user_id", None)
+		user_id = self.get_secure_cookie('user_id', None)
+		if not user_id:
+			return None
+		user = {'user_id': user_id}
+		user['rights'] = int(self.get_secure_cookie('rights'))
+		user['user_name'] = self.get_secure_cookie('user_name', None)
+		if user['user_name']:
+			user['user_name'] = user['user_name'].decode('utf-8')
+		return user
 	
 	##
 	# Render an error page with specified an error header and a message.
@@ -169,15 +179,15 @@ class UploadHandler(BaseHandler):
 					  e_msg='Не указан файл')
 			return
 		fileinfo = self.request.files['xls-table'][0]
-		#
-		# We emulate a file by BytesIO usage.
-		#
-		data = parse_xls(BytesIO(fileinfo['body']))
-		#
-		# Start a transaction. Commit only if all is good
-		#
 		tx = yield pool.begin()
 		try:
+			#
+			# We emulate a file by BytesIO usage.
+			#
+			data = parse_xls(BytesIO(fileinfo['body']))
+			#
+			# Start a transaction. Commit only if all is good
+			#
 			yield insert_report(tx, data)
 			#
 			# Get the inserted report id for creating foreign key to
@@ -204,6 +214,11 @@ class UploadHandler(BaseHandler):
 			# database.
 			date = date.strftime('%Y-%m-%d')
 			self.redirect('/show_table?date={}'.format(date))
+		except BadZipFile as e:
+			print(e)
+			self.rollback_error(tx, e_hdr=ERR_INSERT,
+					    e_msg='Файл имеет неподдерживаемый'\
+						  ' формат')
 		except Exception as e:
 			print(e)
 			if len(e.args) > 0 and e.args[0] == DUPLICATE_ERROR:
@@ -263,7 +278,9 @@ class ShowHandler(BaseHandler):
 						  	'администратору')
 		else:
 			yield tx.commit()
-			self.render('show_table.html', data=report)
+			self.render('show_table.html', **report,
+				    get_val=get_html_val,
+				    room_cols=boiler_room_report_cols)
 
 ##
 # Login a not authorized user.
@@ -301,7 +318,8 @@ class LoginHandler(BaseHandler):
 			# Try to find the user by specified email.
 			#
 			user = yield get_user_by_email(tx, 'id, password, '\
-						       'salt, rights', email)
+						       'salt, rights, name',
+						       email)
 			if not user:
 				self.rollback_error(tx, e_hdr=ERR_404,
 						    e_msg='Пользователь с '\
@@ -320,6 +338,7 @@ class LoginHandler(BaseHandler):
 				return
 			user_id = user[0]
 			rights = user[3]
+			user_name = user[4]
 			#
 			# Set cookies for the current user for one day.
 			#
@@ -331,6 +350,9 @@ class LoginHandler(BaseHandler):
 			#
 			self.set_secure_cookie('rights', str(rights),
 					       expires_days=1)
+			if user_name:
+				self.set_secure_cookie('user_name', user_name,
+						       expires_days=1)
 		except Exception as e:
 			self.rollback_error(tx, e_hdr=ERR_500,
 					    e_msg='На сервере произошла '\
@@ -350,6 +372,10 @@ class LogoutHandler(BaseHandler):
 		self.redirect('/')
 
 if __name__ == "__main__":
+	parser = argparse.ArgumentParser(description='VolComHoz')
+	parser.add_argument('--port', '-p', type=int, required=True,
+			    help='Port for the server running')
+	args = parser.parse_args()
 	app = tornado.web.Application(
 		handlers=[
 			(r'/', MainHandler),
@@ -363,6 +389,6 @@ if __name__ == "__main__":
 		static_path="static/",
 		cookie_secret=secret_conf.cookie_secret,
 		login_url='/login')
-	app.listen(8888)
-	print("Server is started on 8888")
+	app.listen(args.port)
+	print("Server is started on ", args.port)
 	tornado.ioloop.IOLoop.current().start()

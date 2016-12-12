@@ -28,7 +28,9 @@
 						<li><a href="/upload">Загрузить файл</a></li>
 						<li><a href="/show_table">Посмотреть таблицу</a></li>
 					</ul>
-					<p class="navbar-text">Вы вошли как <b>Владислав</b></p>
+					{% if current_user and current_user['user_name'] %}
+						<p class="navbar-text">Вы вошли как <b>{{ current_user['user_name'] }}</b></p>
+					{% end %}
 					<form class="navbar-form navbar-left">
 						{% if current_user %}
 							<a href="/logout" class="btn btn-default">Выйти</a>
