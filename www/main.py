@@ -362,21 +362,12 @@ class LogoutHandler(BaseHandler):
 		self.clear_all_cookies()
 		self.redirect('/')
 
-def parse_config():
-	with open('secret_conf.json') as data:
-		conf = json.load(data)
-		secret_conf.db_host = conf['db_host']
-		secret_conf.db_user = conf['db_user']
-		secret_conf.db_passwd = conf['db_passwd']
-		secret_conf.cookie_secret = conf['cookie_secret']
-		secret_conf.pepper = conf['pepper']
-
 if __name__ == "__main__":
 	parser = argparse.ArgumentParser(description='VolComHoz')
 	parser.add_argument('--port', '-p', type=int, required=True,
 			    help='Port for the server running')
 	args = parser.parse_args()
-	parse_config()
+	secret_conf.parse_config()
 	pool = tormysql.helpers.ConnectionPool(
 		max_connections = 20, #max open connections
 		idle_seconds = 7200, #conntion idle timeout time, 0 is not timeout
