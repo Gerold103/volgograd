@@ -9,5 +9,5 @@ setup(name='VolComHoz',
       author_email='vshpilevoi@mail.ru',
       url='https://github.com/Gerold103/volgograd',
       install_requires=['pbkdf2', 'datetime', 'argparse',
-                        'tornado', 'tormysql', 'openpyxl']
+                        'tornado', 'tormysql', 'openpyxl', 'xlrd']
       )

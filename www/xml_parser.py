@@ -2,18 +2,22 @@
 # -*- coding: utf-8 -*-
 
 import json
+from zipfile import BadZipFile
 
+import xlrd
 from openpyxl import load_workbook
+from openpyxl.reader.excel import load_workbook, InvalidFileException
+from openpyxl.workbook import Workbook
 
 def get_cell(a, row, col):
 	s = a.cell(row=row, column=col).value
-	if s is None:
+	if s is None or s == '':
 		return None
 	return str(s).strip()
 
 def get_float(a, row, col):
 	val = get_cell(a, row, col)
-	if val is None:
+	if val is None or val == '':
 		return None
 	val = val.replace(',', '.')
 	if val == '-':
@@ -22,9 +26,9 @@ def get_float(a, row, col):
 
 def get_int(a, row, col):
 	val = get_cell(a, row, col)
-	if val is None or val == '-':
+	if val is None or val == '-' or val == '':
 		return None
-	return int(val)
+	return int(float(val))
 
 def validate_forecast_table_header(a, result):
 	# Check begin of the table
@@ -151,7 +155,7 @@ def parse_xls_with_forecast(a):
 		assert(len(district) > 0)
 		cur_district = None
 		boiler_rooms = []
-		while cur_district is None and i <= end:
+		while not cur_district and i <= end:
 
 			# read one boiler room
 
@@ -271,8 +275,35 @@ def parse_xls_without_forecast(a):
 	result['districts'] = ditricts
 	return result
 
+def open_xls_as_xlsx(filename):
+    # First open using xlrd.
+    book = xlrd.open_workbook(file_contents=filename.getvalue())
+    index = 0
+    nrows, ncols = 0, 0
+    while nrows * ncols == 0:
+        sheet = book.sheet_by_index(index)
+        nrows = sheet.nrows
+        ncols = sheet.ncols
+        index += 1
+
+    # prepare a xlsx sheet
+    book1 = Workbook()
+    sheet1 = book1.get_active_sheet()
+
+    for row in range(0, nrows):
+        for col in range(0, ncols):
+            sheet1.cell(row=row+1, column=col+1).value = sheet.cell_value(row, col)
+
+    return book1
+
 def parse_xls(file):
-	wb = load_workbook(filename=file, data_only=True)
+	wb = None
+	try:
+		wb = load_workbook(filename=file, data_only=True)
+	except BadZipFile:
+		print("Can't open xls, try to use xlrd...")
+		wb = open_xls_as_xlsx(file)
+		print('Success')
 	a = wb.active
 	if get_cell(a, 1, 2) == 'Сводные данные о работе котельных  МУП '\
 				'"ВКХ" на':
