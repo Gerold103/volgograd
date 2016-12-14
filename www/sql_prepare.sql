@@ -17,21 +17,22 @@ CREATE TABLE reports (id INT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
 	forecast_temp_day_to DOUBLE,
 	forecast_temp_night_from DOUBLE,
 	forecast_temp_night_to DOUBLE,
-	UNIQUE (date));
+	UNIQUE (date)) CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 CREATE TABLE districts (id INT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
 	name TEXT,
-	UNIQUE (name(50)));
+	UNIQUE (name(50))) CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 CREATE TABLE boiler_rooms (id INT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
 	district_id INT UNSIGNED,
 	name TEXT,
 	UNIQUE (district_id, name(50)),
-	FOREIGN KEY (district_id) REFERENCES districts(id) ON DELETE CASCADE);
+	FOREIGN KEY (district_id) REFERENCES districts(id) ON DELETE CASCADE)
+	CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 CREATE TABLE boiler_room_reports(id INT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
 	boiler_room_id INT UNSIGNED,
-    report_id INT UNSIGNED,
+	report_id INT UNSIGNED,
 	T1 DOUBLE, T2 DOUBLE,
 	gas_pressure DOUBLE,
 	boilers_all INT UNSIGNED,
@@ -56,9 +57,11 @@ CREATE TABLE boiler_room_reports(id INT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
 	hardness DOUBLE,
 	transparency DOUBLE,
 	FOREIGN KEY (boiler_room_id) REFERENCES boiler_rooms(id) ON DELETE CASCADE,
-    FOREIGN KEY (report_id) REFERENCES reports(id) ON DELETE CASCADE);
+	FOREIGN KEY (report_id) REFERENCES reports(id) ON DELETE CASCADE)
+	CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 CREATE TABLE users (id INT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
-    email VARCHAR(100), password TEXT, salt VARCHAR(20), name TEXT,
-    rights INT UNSIGNED,
-    UNIQUE (email));
+	email VARCHAR(100), password TEXT, salt VARCHAR(20), name TEXT,
+	rights INT UNSIGNED,
+	UNIQUE (email))
+	CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
