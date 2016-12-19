@@ -176,7 +176,7 @@ def parse_xls_with_forecast(a):
 				boiler_room[fields[k]] = get_float(a, i, j)
 				k += 1
 			hardness = get_cell(a, i, 34)
-			if hardness == 'компл':
+			if 'компл' in hardness:
 				hardness = None
 			else:
 				hardness = get_float(a, i, 34)
