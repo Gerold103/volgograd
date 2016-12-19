@@ -1,44 +1,78 @@
 {% extends "base.html" %}
 
-{% block title %}ВолКомХоз: Выбрать день{% end %}
-
-{% block links %}
-
-<link href="{{ static_url('css/bootstrap-datetimepicker.min.css') }}" rel="stylesheet" media="screen">
-<script type="text/javascript" src="{{ static_url('js/bootstrap-datetimepicker.js') }}" charset="UTF-8"></script>
-
-{% end %}
+{% block title %}ВолКомХоз: Таблица за день{% end %}
 
 {% block body %}
 
-<form action="/show_table" class="form-horizontal" role="form" method="get">
-	<div class="form-group">
-		<label for="dtp_input2" class="col-md-2 control-label">Выберите дату</label>
-		<div class="input-group date form_date col-md-5" data-date="" data-date-format="dd MM yyyy" data-link-field="dtp_input2" data-link-format="yyyy-mm-dd">
-			<input class="form-control" size="16" type="text" value="" readonly>
-			<span class="input-group-addon"><span class="glyphicon glyphicon-remove"></span></span>
-			<span class="input-group-addon"><span class="glyphicon glyphicon-calendar"></span></span>
-		</div>
-		<input type="hidden" id="dtp_input2" name="date" value="" /><br/>
-	</div>
-	<div class="form-group">
-		<div class="col-md-offset-2 col-md-12">
-		<button type="submit" class="btn btn-default">Показать таблицу</button>
-	</div>
-	</div>
-</form>
+<div class="container-fluid" align="center">
+	<ul class="pager">
+		<li class="previous">
+			<a href="/show_table?year={{ year - 1 }}">
+				<span aria-hidden="true">&larr;</span> {{ year - 1 }}
+			</a>
+		</li>
+		<li class="next">
+			<a href="/show_table?year={{ year + 1 }}">
+				{{ year + 1 }} <span aria-hidden="true">&rarr;</span>
+			</a>
+		</li>
+	</ul>
+{% for season in range(0, 4) %}
+	<div class="row">
+	{% for month in range(0, 3) %}
+		{% set month_num = season * 3 + month %}
+		<div class="col-xs-4 col-sm-4 col-md-4 col-lg-4">
+			<table class="table table-bordered choose-day-in-month-table">
+				<thead>
+					<tr>
+						<th colspan="7">
+						{{ month_names[month_num] }}
+						</th>
+					</tr>
+				</thead>
+			<tbody>
+				{% set week_iter = 0 %}
+				{% set day_iter = 0 %}
+				{% for day in months[month_num] %}
+					{% if week_iter == 0 %}
+						{% if day_iter > 0 %}
+						</tr>
+						{% end %}
+						<tr>
+					{% end %}
 
-<script type="text/javascript">
-	$('.form_date').datetimepicker({
-        language:  'fr',
-        weekStart: 1,
-        todayBtn:  1,
-		autoclose: 1,
-		todayHighlight: 1,
-		startView: 2,
-		minView: 2,
-		forceParse: 0
-	});
-</script>
+					{% if 'full_date' in day %}
+					<td class="date-available">
+						<a href="/show_table?date={{ day['full_date'] }}">
+							{{ day['day_val'] }}
+						</a>
+					{% else %}
+					<td class="date-not-available">
+						{{ day['day_val'] }}
+					{% end %}
+					</td>
+					{% set week_iter = (week_iter + 1) % 7 %}
+					{% set day_iter = day_iter + 1 %}
+				{% end %}
+				</tr>
+				</tbody>
+			</table>
+		</div>
+	{% end %}
+	</div>
+{% end %}
+	<ul class="pager">
+		<li class="previous">
+			<a href="/show_table?year={{ year - 1 }}">
+				<span aria-hidden="true">&larr;</span> {{ year - 1 }}
+			</a>
+		</li>
+		<li class="next">
+			<a href="/show_table?year={{ year + 1 }}">
+				{{ year + 1 }} <span aria-hidden="true">&rarr;</span>
+			</a>
+		</li>
+	</ul>
+</div>
 
 {% end %}

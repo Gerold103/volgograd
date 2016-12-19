@@ -23,11 +23,11 @@
      vertical-align: middle;
 }
 
-td.rotate {
+.boiler_rooms_table td.rotate {
 	padding: 0px !important;
 }
 
-td.rotate > div {
+.boiler_rooms_table td.rotate > div {
   -webkit-transform: rotate(-90deg);
   -moz-transform: rotate(-90deg);
   -ms-transform: rotate(-90deg);
@@ -51,4 +51,29 @@ td.rotate > div {
 
 .main-menu .btn {
 	max-width: 400px;
+}
+
+.choose-day-in-month-table {
+	text-align: center;
+}
+
+.choose-day-in-month-table td.date-available {
+	background: #d2ffd4;
+}
+
+.choose-day-in-month-table td.date-available:hover {
+	background: #bcfebf;
+}
+
+.choose-day-in-month-table td.date-not-available {
+	color: #939393;
+}
+
+.date-available a {
+	color: inherit;
+	text-decoration: none;
+}
+
+.date-available a:visited {
+	color: inherit;
 }

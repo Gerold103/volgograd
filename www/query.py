@@ -37,6 +37,19 @@ def get_report_by_date(tx, date, cols):
 	return cursor.fetchone()
 
 ##
+# Get report days and months by the given year.
+# @param tx   Current transaction.
+# @param year Year which need to find.
+#
+@tornado.gen.coroutine
+def get_report_dates_by_year(tx, year):
+	sql = "SELECT month(date) as month, day(date) as day "\
+	      "FROM reports WHERE year(date) = %s"
+	params = (year, )
+	cursor = yield tx.execute(query=sql, params=params)
+	return cursor.fetchall()
+
+##
 # Get a district by the name.
 # @param name District name.
 # @param cols String with columns separated by commas: 'id, name', for example.

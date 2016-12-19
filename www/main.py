@@ -3,9 +3,11 @@
 
 from io import BytesIO
 from datetime import datetime
+from datetime import date as libdate
 from zipfile import BadZipFile
 import json
 import argparse
+import calendar
 
 import tornado
 import tornado.ioloop
@@ -27,6 +29,7 @@ ERR_ACCESS = 'Ошибка доступа'
 ERR_LOGIN  = 'Ошибка входа'
 ERR_UPLOAD = 'Ошибка загрузки'
 ERR_404    = 'Не найдено'
+ERR_PARAMETERS = 'Неверные параметры'
 
 def err_not_specified(what):
 	return 'Не указано: {}'.format(what)
@@ -232,6 +235,107 @@ class UploadHandler(BaseHandler):
 # Choose date and show page with a report table on specified date.
 #
 class ShowHandler(BaseHandler):
+	##
+	# Render the calendar for the specified year.
+	# @param year Print calendar with all months of this year.
+	#
+	@tornado.web.authenticated
+	@tornado.gen.coroutine
+	def print_calendar(self, year):
+		assert(year > 1970)
+		if not self.check_rights(CAN_SEE_REPORTS):
+			return
+		uploaded_days_raw = []
+		#
+		# Find what reports were uploaded.
+		#
+		tx = yield pool.begin()
+		try:
+			uploaded_days_raw = yield get_report_dates_by_year(tx, year)
+		except Exception as e:
+			print('Error: e')
+			self.rollback_error(tx, e_hdr=ERR_500,
+					    e_msg='Не удалось загрузить год')
+			return
+		yield tx.commit()
+		uploaded_days = {}
+		#
+		# Group days by months.
+		#
+		for month, day in uploaded_days_raw:
+			if month in uploaded_days:
+				uploaded_days[month] |= {day}
+			else:
+				uploaded_days[month] = set([day, ])
+		#
+		# If not reports for the specified year then
+		# render the error page - nothing to show.
+		#
+		if not uploaded_days:
+			self.render_error(e_hdr=ERR_404,
+					  e_msg='За указанный год отчетов '\
+						'не найдено')
+			return
+		months = []
+		#
+		# Build months table. i-th element - array of i-th
+		# month with specified report date if it was found
+		# in reports table.
+		#
+		for month_num in range(1, 13):
+			#
+			# Start week - number of the first day of
+			# the month in the week: 0 - 6 = from
+			# monday to sunday.
+			#
+			start_week, month_range =\
+				calendar.monthrange(year, month_num)
+			month = []
+			day_iter = 1
+			#
+			# Weeks count - how many full weeks need
+			# to contain this month.
+			#
+			weeks_cnt = int((start_week + month_range) / 7)
+			if (start_week + month_range) % 7 != 0:
+				weeks_cnt += 1
+			for day in range(0, weeks_cnt * 7):
+				#
+				# If the day not in this month
+				# then skip it.
+				#
+				if start_week > day or day_iter > month_range:
+					month.append({'day_val': ''})
+					continue
+
+				#
+				# If the day from this month but
+				# a report for this day wasn't
+				# found then print only day.
+				#
+				if month_num not in uploaded_days or\
+				   day_iter not in uploaded_days[month_num]:
+					month.append({'day_val': day_iter})
+					day_iter += 1
+					continue
+				#
+				# Else generate the link to the
+				# report table.
+				#
+				full_date = libdate(year=year,
+						    month=month_num,
+						    day=day_iter)
+				full_date = full_date.strftime('%Y-%m-%d')
+				month.append({'day_val': day_iter,
+					      'full_date': full_date})
+				day_iter += 1
+			months.append(month)
+		month_names = ['Январь', 'Февраль', 'Март', 'Апрель', 'Май',
+			       'Июнь', 'Июль', 'Август', 'Сентябрь', 'Октябрь',
+			       'Ноябрь', 'Декабрь']
+		self.render('choose_day.html', months=months,
+			    month_names=month_names, year=year)
+
 	@tornado.web.authenticated
 	@tornado.gen.coroutine
 	def get(self):
@@ -241,8 +345,16 @@ class ShowHandler(BaseHandler):
 		# If date is not specified then choose one.
 		#
 		date = self.get_argument('date', None)
+		year = self.get_argument('year', libdate.today().year)
+		try:
+			year = int(year)
+		except Exception as e:
+			print('Error: ', e)
+			self.render_error(e_hdr=ERR_PARAMETERS,
+					  e_msg='Год должен быть целым числом')
+			return
 		if not date:
-			self.render('choose_day.html')
+			yield self.print_calendar(year)
 			return
 		tx = yield pool.begin()
 		try:
