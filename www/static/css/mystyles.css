@@ -49,6 +49,14 @@
 	font-weight: bold;
 }
 
+.boiler_rooms_table td.danger {
+	background: #ffbbbb;
+}
+
+.boiler_rooms_table td.danger:hover {
+	background: #ffb0b0;
+}
+
 .main-menu .btn {
 	max-width: 400px;
 }

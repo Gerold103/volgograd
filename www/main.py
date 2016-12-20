@@ -382,8 +382,7 @@ class ShowHandler(BaseHandler):
 		else:
 			yield tx.commit()
 			self.render('show_table.html', **report,
-				    get_val=get_html_val,
-				    room_cols=boiler_room_report_cols)
+				    get_val=get_html_val)
 
 ##
 # Login a not authorized user.
