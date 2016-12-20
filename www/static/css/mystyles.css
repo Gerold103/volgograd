@@ -57,6 +57,14 @@
 	background: #ffb0b0;
 }
 
+.boiler_rooms_table td.warning {
+	background: #fffdc9;
+}
+
+.boiler_rooms_table td.warning:hover {
+	background: #fffcb7;
+}
+
 .main-menu .btn {
 	max-width: 400px;
 }

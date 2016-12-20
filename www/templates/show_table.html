@@ -55,7 +55,7 @@
 
 			        <td rowspan="2" colspan="3">Сетевые насосы</td>
 
-			        <td colspan="4">Среднесуточная температура</td>
+			        <td colspan="6">Среднесуточная температура</td>
 
 			        <td colspan="4">Температура ночью</td>
 
@@ -72,6 +72,8 @@
 			    <tr align="center">
 			        <td rowspan="2" colspan="2">Заданная</td>
 			        <td rowspan="2" colspan="2">Фактическая</td>
+			        <td rowspan="3" class="rotate"><div>T<sub>пр.откл.%</sub></div></td>
+			        <td rowspan="3" class="rotate"><div>T<sub>обр.откл.%</sub></div></td>
 
 			        <td rowspan="2" colspan="2">Заданная</td>
 			        <td rowspan="2" colspan="2">Фактическая</td>
@@ -137,10 +139,33 @@
 							<td>{{ get_val(room, 'net_pumps_in_work') }}</td>
 							<td>{{ get_val(room, 'net_pumps_reserve') }}</td>
 							<td>{{ get_val(room, 'net_pumps_in_repair') }}</td>
-							<td>{{ get_val(room, 'all_day_expected_temp1') }}</td>
-							<td>{{ get_val(room, 'all_day_expected_temp2') }}</td>
-							<td>{{ get_val(room, 'all_day_real_temp1') }}</td>
-							<td>{{ get_val(room, 'all_day_real_temp2') }}</td>
+							{% set expected1 = get_val(room, 'all_day_expected_temp1') %}
+							{% set expected2 = get_val(room, 'all_day_expected_temp2') %}
+							{% set real1 = get_val(room, 'all_day_real_temp1') %}
+							{% set real2 = get_val(room, 'all_day_real_temp2') %}
+							<td>{{ expected1 }}</td>
+							<td>{{ expected2 }}</td>
+							<td>{{ real1 }}</td>
+							<td>{{ real2 }}</td>
+							{% if expected1 != '-' and real1 != '-' %}
+								{% set percent = 100.0 * (real1 - expected1) / expected1 %}
+								{% set percent_str = '{:.2f}%'.format(percent) %}
+								{% if percent > 3 %}
+									<td class="danger">{{ percent_str }}</td>
+									<td>-</td>
+								{% elif percent < -3 %}
+									<td class="warning">{{ percent_str }}</td>
+									<td>-</td>
+								{% else %}
+									<td>{{ percent_str }}</td>
+									<td>-</td>
+								{% end %}
+							{% else %}
+								<td>-</td>
+								<td>-</td>
+							{% end %}
+
+
 							<td>{{ get_val(room, 'all_night_expected_temp1') }}</td>
 							<td>{{ get_val(room, 'all_night_expected_temp2') }}</td>
 							<td>{{ get_val(room, 'all_night_real_temp1') }}</td>
