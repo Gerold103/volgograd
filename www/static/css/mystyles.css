@@ -7,7 +7,6 @@
 }
 
 .weather_panel {
-	margin: 20px;
 	padding: 0px;
 }
 
@@ -92,4 +91,8 @@
 
 .date-available a:visited {
 	color: inherit;
+}
+
+.report-actions-panel {
+	padding: 15px;
 }

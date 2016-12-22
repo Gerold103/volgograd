@@ -49,6 +49,13 @@ def get_report_dates_by_year(tx, year):
 	cursor = yield tx.execute(query=sql, params=params)
 	return cursor.fetchall()
 
+@tornado.gen.coroutine
+def delete_report_by_date(tx, date):
+	sql = "DELETE FROM reports WHERE date = %s"
+	params = (date, )
+	cursor = yield tx.execute(query=sql, params=params)
+	return cursor.fetchone()
+
 ##
 # Get a district by the name.
 # @param name District name.

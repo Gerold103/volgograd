@@ -42,7 +42,7 @@ python3
 ```
 mysql -u <example_user> -p
 mysql> use volgograd;
-mysql> insert into users values (NULL, '<почта администратора>', 'wgew@#%@%674766&(^67MHlD$IspufLNDWbanb6mhltuvtAmCAphp6tdd', '869DMHlD', 'Администратор', 3);
+mysql> insert into users values (NULL, '<почта администратора>', 'wgew@#%@%674766&(^67MHlD$IspufLNDWbanb6mhltuvtAmCAphp6tdd', '869DMHlD', 'Администратор', 7);
 mysql> insert into users values (NULL, '<почта простого пользователя>', 'wgew@#%@%674766&(^67D7jV$IFRwpkZ6HfSfotHSgDESeI0NmvaLY2kM', 'IOKqD7jV', 'Пользователь', 2);
 ```
 

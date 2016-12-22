@@ -39,6 +39,11 @@
 			</div>
 		</div>
 	{% end %}
+	{% if enable_delete %}
+		<div class="container-fluid report-actions-panel" align="right">
+			<a class="btn btn-danger" href="/drop_report?date={{ date }}" onclick="return confirm('Вы уверены? Действие нельзя будет отменить!')">Удалить отчет</a>
+		</div>
+	{% end %}
 	<div class="container-fluid boiler_rooms_table" align="center">
 		<table class="table table-bordered table-striped table-hover">
 			<thead>

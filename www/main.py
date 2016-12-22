@@ -31,11 +31,9 @@ ERR_UPLOAD = 'Ошибка загрузки'
 ERR_404    = 'Не найдено'
 ERR_PARAMETERS = 'Неверные параметры'
 
-def err_not_specified(what):
-	return 'Не указано: {}'.format(what)
-
 CAN_UPLOAD_REPORTS = 0x01
 CAN_SEE_REPORTS = 0x02
+CAN_DELETE_REPORTS = 0x04
 
 ##
 # Base class for users authentication and error pages rendering.
@@ -381,8 +379,13 @@ class ShowHandler(BaseHandler):
 						  	'администратору')
 		else:
 			yield tx.commit()
+			user = self.get_current_user()
+			assert(user)
+			assert('rights' in user)
+			enable_delete = user['rights'] & CAN_DELETE_REPORTS
 			self.render('show_table.html', **report,
-				    get_val=get_html_val)
+				    get_val=get_html_val,
+				    enable_delete=enable_delete)
 
 ##
 # Login a not authorized user.
@@ -473,6 +476,37 @@ class LogoutHandler(BaseHandler):
 		self.clear_all_cookies()
 		self.redirect('/')
 
+##
+# Handle drop of the report.
+#
+class DropHandler(BaseHandler):
+	@tornado.gen.coroutine
+	@tornado.web.authenticated
+	def get(self):
+		if not self.check_rights(CAN_DELETE_REPORTS):
+			self.render_error(e_hdr=ERR_ACCESS,
+					  e_msg='Вы не можете удалять отчеты')
+			return
+		date = self.get_argument('date', None)
+		if date is None:
+			self.render_error(e_hdr=ERR_404,
+					  e_msg='Не указана дата отчета')
+			return
+		tx = yield pool.begin()
+		try:
+			yield delete_report_by_date(tx, date)
+		except Exception as e:
+			print('Error: ', e)
+			self.rollback_error(tx, e_hdr=ERR_500,
+					    e_msg='На сервере произошла '\
+						  'ошибка, обратитесь к '\
+						  'администратору')
+			return
+		tx.commit()
+		print('Report for date {} is dropped'.format(date))
+		self.redirect('/')
+
+
 if __name__ == "__main__":
 	parser = argparse.ArgumentParser(description='VolComHoz')
 	parser.add_argument('--port', '-p', type=int, required=True,
@@ -496,7 +530,8 @@ if __name__ == "__main__":
 			(r'/upload', UploadHandler),
 			(r'/show_table', ShowHandler),
 			(r'/login', LoginHandler),
-			(r'/logout', LogoutHandler)
+			(r'/logout', LogoutHandler),
+			(r'/drop_report', DropHandler)
 			],
 		autoreload=True,
 		template_path="templates/",
