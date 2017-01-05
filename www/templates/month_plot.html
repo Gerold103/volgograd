@@ -1,0 +1,309 @@
+{% extends "base.html" %}
+
+{% block title %}ВолКомХоз: график{% end %}
+
+{% block links %}
+<script type="text/javascript" src="{{ static_url('js/Chart.bundle.js') }}"></script>
+{% end %}
+
+{% block body %}
+<h1>Режим работы тепловых сетей, Волгоград {{ month_names[month - 1] }}, {{ year }}</h1>
+
+{% set table_struct = [
+	{'title': 'Расчетный<br>температурный<br>график', 'childs': [
+		{'title': 'T<sub>1</sub>', 'id': 'T1', 'name': 'Расчетный температурный график, T1'},
+		{'title': 'T<sub>2</sub>', 'id': 'T2', 'name': 'Расчетный температурный график, T2'}
+	]},
+	{'title': 'P газа', 'id': 'gas_pressure'},
+	{'title': 'Горелок в работе', 'id': 'torchs_in_use'},
+	{'title': 'Котлы', 'childs': [
+		{'title': 'Всего', 'id': 'boilers_all', 'name': 'Котлов всего'},
+		{'title': 'В работе', 'id': 'boilers_in_use', 'name': 'Котлы в работе'},
+		{'title': 'Резерв', 'id': 'boilers_reserve', 'name': 'Котлы резерв'},
+		{'title': 'Ремонт', 'id': 'boilers_in_repair', 'name': 'Котлы ремонт'}
+	]},
+	{'title': 'Сетевые<br>насосы', 'childs': [
+		{'title': 'В работе', 'id': 'net_pumps_in_work', 'name': 'Сетевые насосы в работе'},
+		{'title': 'Резерв', 'id': 'net_pumps_reserve', 'name': 'Сетевые насосы резерв'},
+		{'title': 'Ремонт', 'id': 'net_pumps_in_repair', 'name': 'Сетевые насосы ремонт'}
+	]},
+	{'title': 'Среднесуточная<br>температура', 'childs': [
+		{'title': 'Заданная T<sub>1</sub>', 'id': 'all_day_expected_temp1', 'name': 'Среднесуточная температура, заданная, T1'},
+		{'title': 'Заданная T<sub>2</sub>', 'id': 'all_day_expected_temp2', 'name': 'Среднесуточная температура, заданная, T2'},
+		{'title': 'Фактическая T<sub>1</sub>', 'id': 'all_day_real_temp1', 'name': 'Среднесуточная температура, фактическая, T1'},
+		{'title': 'Фактическая T<sub>2</sub>', 'id': 'all_day_real_temp2', 'name': 'Среднесуточная температура, фактическая, T2'},
+		{'title': 'T пр. откл. %',
+		 'id': 'day_average_temp_deviation1',
+		 'name': 'Среднесуточная температура, T пр. откл. %',
+		 'deviation_from': 'all_day_real_temp1',
+		 'deviation_to': 'all_day_expected_temp1',
+		 'border_low': -0.03,
+		 'border_up': 0.03,
+		},
+		{'title': 'T обр. откл. %',
+		 'id': 'day_average_temp_deviation2',
+		 'name': 'Среднесуточная температура, T обр. откл. %',
+		 'deviation_from': 'all_day_real_temp2',
+		 'deviation_to': 'all_day_expected_temp2',
+		 'border_low': -0.03,
+		 'border_up': 0.03,
+		}
+	]},
+	{'title': 'Температура<br>ночью', 'childs': [
+		{'title': 'Заданная T<sub>1</sub>', 'id': 'all_night_expected_temp1', 'name': 'Температура ночью, заданная, T1'},
+		{'title': 'Заданная T<sub>2</sub>', 'id': 'all_night_expected_temp2', 'name': 'Температура ночью, заданная, T2'},
+		{'title': 'Фактическая T<sub>1</sub>', 'id': 'all_night_real_temp1', 'name': 'Температура ночью, фактическая, T1'},
+		{'title': 'Фактическая T<sub>2</sub>', 'id': 'all_night_real_temp2', 'name': 'Температура ночью, фактическая, T2'},
+		{'title': 'T пр. откл. %',
+		 'id': 'night_average_temp_deviation1',
+		 'name': 'Температура ночью, T пр. откл. %',
+		 'deviation_from': 'all_night_real_temp1',
+		 'deviation_to': 'all_night_expected_temp1',
+		 'border_low': -0.03,
+		 'border_up': 0.03,
+		},
+		{'title': 'T обр. откл. %',
+		 'id': 'night_average_temp_deviation2',
+		 'name': 'Температура ночью, T обр. откл. %',
+		 'deviation_from': 'all_night_real_temp2',
+		 'deviation_to': 'all_night_expected_temp2',
+		 'border_low': -0.03,
+		 'border_up': 0.03,
+		}
+	]},
+	{'title': 'Давление<br>в сети', 'childs': [
+		{'title': 'P<sub>1</sub>', 'id': 'net_pressure1', 'name': 'Давление в сети, P1'},
+		{'title': 'P<sub>2</sub>', 'id': 'net_pressure2', 'name': 'Давление в сети, P2'}
+	]},
+	{'title': 'Расход воды<br>в час', 'childs': [
+		{'title': 'Расчетный', 'id': 'net_water_consum_expected_ph', 'name': 'Расход воды в час, расчетный'},
+		{'title': 'Фактический', 'id': 'net_water_consum_real_ph', 'name': 'Расход воды в час, фактический'}
+	]},
+	{'title': 'Расход<br>подпиточной<br>воды', 'childs': [
+		{'title': 'Расчетный', 'id': 'make_up_water_consum_expected_ph', 'name': 'Расход подпиточной воды, расчетный'},
+		{'title': 'Фактический<br>на 6:00', 'id': 'make_up_water_consum_real_ph', 'name': 'Расход подпиточной воды, фактический на 6:00'},
+		{'title': 'Фактический<br>за сутки', 'id': 'make_up_water_consum_real_pd', 'name': 'Расход подпиточной воды, фактический за сутки'},
+		{'title': 'Фактический<br>за месяц', 'id': 'make_up_water_consum_real_pm', 'name': 'Расход подпиточной воды, фактический за месяц'},
+		{'title': 'Отклонение %',
+		 'id': 'make_up_water_consum_deviation',
+		 'name': 'Расход подпиточной воды, отклонение %',
+		 'deviation_from': 'make_up_water_consum_real_ph',
+		 'deviation_to': 'make_up_water_consum_expected_ph',
+		 'border_up': 0,
+		}
+	]},
+	{'title': 'Жесткость', 'id': 'hardness'},
+	{'title': 'Прозрачность', 'id': 'transparency'}
+] %}
+
+<div class="container plot-control-form">
+	<div class="panel panel-default">
+		<div class="panel-heading">
+			Контрольная панель графика
+		</div>
+		<div class="panel-body form-inline form-group">
+			<div class="input-group">
+				<div class="input-group-addon">Минимум Oy</div>
+				<input type="text" id="plot-y-min" placeholder="по умолчанию" class="form-control">
+			</div>
+			<div class="input-group">
+				<div class="input-group-addon">Максимум Oy</div>
+				<input type="text" id="plot-y-max" placeholder="по умолчанию" class="form-control">
+			</div>
+			<div class="input-group">
+				<div class="input-group-addon">Параметр</div>
+				<select class="form-control" id="plot-param">
+					{% for item in table_struct %}
+						{% if 'childs' in item %}
+							{% for child in item['childs'] %}
+								<option value="{{ child['id'] }}">{{ child['name'] }}</option>
+							{% end %}
+						{% else %}
+							<option value="{{ item['id'] }}">{{ item['title'] }}</option>
+						{% end %}
+					{% end %}
+				</select>
+			</div>
+			<br><br>
+			<div class="input-group">
+				<div class="input-group-addon">Минимум Ox</div>
+				<input type="text" id="plot-x-min" placeholder="по умолчанию" class="form-control">
+			</div>
+			<div class="input-group">
+				<div class="input-group-addon">Максимум Ox</div>
+				<input type="text" id="plot-x-max" placeholder="по умолчанию" class="form-control">
+			</div>
+			<button class="btn btn-primary" onclick="update_plot();">Обновить график</button>
+		</div>
+	</div>
+</div>
+<canvas id="plot" style="max-height: 600px;"></canvas>
+<div class="container-fluid month-plot-table" align="center">
+	<table class="table table-bordered table-striped table-hover">
+		<thead>
+			<tr align="center">
+				<td colspan="2">День</td>
+
+				{% for day in range(1, month_range + 1) %}
+				<td><a href="/show_table?date={{ get_date(year, month, day) }}">
+					{{ day }}
+				</a></td>
+				{% end %}
+			</tr>
+		</thead>
+		<tbody>
+			{% autoescape None %}
+			{% for item in table_struct %}
+				{% if 'childs' in item %}
+					{% set first = item['childs'][0] %}
+					<tr align="center" id="{{ first['id'] }}" name="{{ first['name'] }}" data-offset="2">
+						<td rowspan="{{ len(item['childs']) }}">
+							{{ item['title'] }}
+						</td>
+					{% set childs_count = len(item['childs']) %}
+					{% for i in range(childs_count) %}
+						{% set child = item['childs'][i] %}
+						<td>{{ child['title'] }}</td>
+
+						{% if 'deviation_from' in child %}
+							{% for day in range(1, month_range + 1) %}
+								{% set expected_val = get_val(get_val(statistics, day), child['deviation_to']) %}
+								{% set real_val = get_val(get_val(statistics, day), child['deviation_from']) %}
+								{% if expected_val == '-' or real_val == '-' %}
+									<td>-</td>
+								{% else %}
+									{% set diff = (real_val - expected_val) / expected_val %}
+									{% set percent_str = '{:.2f}%'.format(diff * 100.0) %}
+									{% if 'border_up' in child and diff > child['border_up'] %}
+										<td class="danger">{{ percent_str }}</td>
+									{% elif 'border_low' in child and diff < child['border_low'] %}
+										<td class="warning">{{ percent_str }}</td>
+									{% else %}
+										<td>{{ percent_str }}</td>
+									{% end %}
+								{% end %}
+							{% end %}
+						{% else %}
+							{% for day in range(1, month_range + 1) %}
+								<td>{{ get_float(get_val(statistics, day), child['id']) }}</td>
+							{% end %}
+						{% end %}
+						</tr>
+						{% if i + 1 < childs_count %}
+							{% set next = item['childs'][i + 1] %}
+							<tr align="center" id="{{ next['id'] }}" name="{{ next['name'] }}" data-offset="1">
+						{% end %}
+					{% end %}
+				{% else %}
+					<tr align="center" id="{{ item['id'] }}" name="{{ item['title'] }}" data-offset="1">
+						<td colspan="2">{{ item['title'] }}</td>
+						{% for day in range(1, month_range + 1) %}
+							<td>{{ get_float(get_val(statistics, day), item['id']) }}</td>
+						{% end %}
+					</tr>
+				{% end %}
+			{% end %}
+		</tbody>
+	</table>
+</div>
+<script type="text/javascript">
+	var data = {};
+	data.labels = [ {{ ",".join(list(map(lambda x: str(x), range(1, month_range + 1)))) }} ];
+	data.datasets = [{
+		label: 'Значения', fill: false, backgroundColor: 'rgb(75, 192, 192)',
+		borderColor: 'rgb(75, 192, 192)', borderDash: [5, 5]
+	}];
+	var options = {
+		responsive: true,
+		maintainAspectRatio: false,
+		title:{
+	    		display:true,
+	    		text:'Среднесуточная температура, факт. Т1'
+		},
+		tooltips: {
+			mode: 'index',
+			intersect: false,
+		},
+		hover: {
+			mode: 'nearest',
+			intersect: true
+		},
+		scales: {
+			xAxes: [{
+				display: true,
+				scaleLabel: {
+					display: true,
+					labelString: 'День'
+				}
+			}],
+			yAxes: [{
+				display: true,
+				scaleLabel: {
+					display: true,
+					labelString: 'Значение'
+				}
+			}]
+		}
+	};
+        function plot_parameter(name) {
+		var $tr = $("#"+name);
+		var offset = $tr.attr("data-offset");
+		var childs = $tr.children();
+		var name_array = childs.slice(0, offset);
+		var name = $tr.attr("name");
+		var jvalues = childs.slice(offset);
+		var values = [];
+        	jvalues.map(function(k, v) {
+        		if (v.innerHTML != '-')
+        			values.push(parseFloat(v.innerHTML));
+        		else
+        			values.push(NaN);
+        	});
+		if ('myLine' in window) {
+			window.myLine.destroy();
+		}
+		var ctx = document.getElementById("plot").getContext("2d");
+		data.datasets[0].data = values;
+		options.title.text = name;
+		window.myLine = new Chart(ctx, {type: 'line', data: data, options: options});
+        };
+        function update_plot() {
+        	var y_min = document.getElementById("plot-y-min").value;
+        	var y_max = document.getElementById("plot-y-max").value;
+        	var x_min = document.getElementById("plot-x-min").value;
+        	var x_max = document.getElementById("plot-x-max").value;
+        	var param = document.getElementById("plot-param").value;
+        	var y_ticks = {};
+        	var x_ticks = {};
+        	if (y_min != '') {
+        		y_min = parseFloat(y_min);
+        		if (y_min != NaN)
+        			y_ticks.min = y_min;
+        	}
+        	if (y_max != '') {
+        		y_max = parseFloat(y_max);
+        		if (y_max != NaN)
+        			y_ticks.max = y_max;
+        	}
+        	if (x_min != '') {
+        		x_min = parseFloat(x_min);
+        		if (x_min != NaN)
+        			x_ticks.min = x_min;
+        	}
+        	if (x_max != '') {
+        		x_max = parseFloat(x_max);
+        		if (x_max != NaN)
+        			x_ticks.max = x_max;
+        	}
+        	options.scales.xAxes[0].ticks = x_ticks;
+        	options.scales.yAxes[0].ticks = y_ticks;
+        	plot_parameter(param);
+        };
+        window.onload = function() {
+        	plot_parameter("all_day_expected_temp1");
+        };
+        $("tbody tr").click(function(e) {
+        	plot_parameter(e.currentTarget.id);
+        });
+</script>
+{% end %}

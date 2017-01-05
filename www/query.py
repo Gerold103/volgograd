@@ -1,6 +1,9 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 
+import calendar
+from datetime import date as libdate
+
 import tornado
 import tornado.gen
 
@@ -120,12 +123,28 @@ def get_safe_val(src, name):
 	return src[name]
 
 ##
+# Get a string representing the specified date.
+#
+def get_str_date(year, month, day):
+	return libdate(year=year, month=month, day=day).strftime('%Y-%m-%d')
+
+##
 # Convert not existing and None values to '-' for html output.
 #
 def get_html_val(src, name):
 	if not name in src or src[name] is None:
 		return '-'
 	return src[name]
+
+##
+# Get string representation of a float value useful for output to
+# an user on a web page.
+#
+def get_html_float_to_str(src, name, precision=2):
+	try:
+		return ('{:.' + str(precision) + 'f}').format(float(src[name]))
+	except:
+		return '-'
 
 ##
 # Insert the new report about the specified boiler room.
@@ -250,6 +269,32 @@ def get_full_report_by_date(tx, date):
 		district['rooms'] = rooms
 		result['districts'].append(district)
 	return result
+
+##
+# Get average values of all parameters for the specified month
+# in all boiler rooms.
+#
+@tornado.gen.coroutine
+def get_avg_reports_by_month(tx, year, month):
+	get_avg = lambda x: 'AVG({})'.format(x)
+	avg_list = list(map(get_avg, boiler_room_report_cols))
+	sql = 'SELECT DAY(date), {} FROM reports JOIN boiler_room_reports '\
+	      'ON(reports.id = report_id) WHERE MONTH(date) = %s and '\
+	      'YEAR(date) = %s GROUP BY date;'.format(",".join(avg_list))
+	params = (month, year)
+	cursor = yield tx.execute(query=sql, params=params)
+	data = cursor.fetchall()
+	start_week, month_range = calendar.monthrange(year, month)
+	res = {}
+	for row in data:
+		params = {}
+		day = row[0]
+		i = 1
+		for col in boiler_room_report_cols:
+			params[col] = row[i]
+			i += 1
+		res[day] = params
+	return res
 
 ##
 # Get a user by the specified email.

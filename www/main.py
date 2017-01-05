@@ -8,6 +8,7 @@ from zipfile import BadZipFile
 import json
 import argparse
 import calendar
+import logging
 
 import tornado
 import tornado.ioloop
@@ -34,6 +35,12 @@ ERR_PARAMETERS = 'Неверные параметры'
 CAN_UPLOAD_REPORTS = 0x01
 CAN_SEE_REPORTS = 0x02
 CAN_DELETE_REPORTS = 0x04
+
+month_names = ['Январь', 'Февраль', 'Март', 'Апрель', 'Май',
+	       'Июнь', 'Июль', 'Август', 'Сентябрь', 'Октябрь',
+	       'Ноябрь', 'Декабрь']
+
+logger = logging.getLogger('volgograd_log')
 
 ##
 # Base class for users authentication and error pages rendering.
@@ -206,13 +213,13 @@ class UploadHandler(BaseHandler):
 			# database.
 			date = date.strftime('%Y-%m-%d')
 			self.redirect('/show_table?date={}'.format(date))
-		except BadZipFile as e:
-			print(e)
+		except BadZipFile:
+			logger.exception("Unsupported file type")
 			self.rollback_error(tx, e_hdr=ERR_INSERT,
 					    e_msg='Файл имеет неподдерживаемый'\
 						  ' формат')
 		except Exception as e:
-			print(e)
+			logger.exception("Error with uploading report")
 			if len(e.args) > 0 and e.args[0] == DUPLICATE_ERROR:
 				self.rollback_error(tx,
 						    e_hdr=ERR_INSERT,
@@ -249,9 +256,11 @@ class ShowHandler(BaseHandler):
 		#
 		tx = yield pool.begin()
 		try:
-			uploaded_days_raw = yield get_report_dates_by_year(tx, year)
-		except Exception as e:
-			print('Error: e')
+			uploaded_days_raw = yield get_report_dates_by_year(tx,
+									   year)
+		except Exception:
+			logger.exception('Error with getting report dates by '\
+					 'year')
 			self.rollback_error(tx, e_hdr=ERR_500,
 					    e_msg='Не удалось загрузить год')
 			return
@@ -271,8 +280,8 @@ class ShowHandler(BaseHandler):
 		#
 		if not uploaded_days:
 			self.render_error(e_hdr=ERR_404,
-					  e_msg='За указанный год отчетов '\
-						'не найдено')
+					  e_msg='За указанный год %s отчетов '\
+						'не найдено' % year)
 			return
 		months = []
 		#
@@ -320,17 +329,12 @@ class ShowHandler(BaseHandler):
 				# Else generate the link to the
 				# report table.
 				#
-				full_date = libdate(year=year,
-						    month=month_num,
-						    day=day_iter)
-				full_date = full_date.strftime('%Y-%m-%d')
 				month.append({'day_val': day_iter,
-					      'full_date': full_date})
+					      'full_date':
+						get_str_date(year, month_num,
+							     day_iter)})
 				day_iter += 1
 			months.append(month)
-		month_names = ['Январь', 'Февраль', 'Март', 'Апрель', 'Май',
-			       'Июнь', 'Июль', 'Август', 'Сентябрь', 'Октябрь',
-			       'Ноябрь', 'Декабрь']
 		self.render('choose_day.html', months=months,
 			    month_names=month_names, year=year)
 
@@ -346,8 +350,8 @@ class ShowHandler(BaseHandler):
 		year = self.get_argument('year', libdate.today().year)
 		try:
 			year = int(year)
-		except Exception as e:
-			print('Error: ', e)
+		except Exception:
+			logger.exception("Year must be positive number")
 			self.render_error(e_hdr=ERR_PARAMETERS,
 					  e_msg='Год должен быть целым числом')
 			return
@@ -356,7 +360,6 @@ class ShowHandler(BaseHandler):
 			return
 		tx = yield pool.begin()
 		try:
-
 			report = yield get_full_report_by_date(tx, date)
 			if not report:
 				self.rollback_error(tx,
@@ -365,18 +368,18 @@ class ShowHandler(BaseHandler):
 						    	  'дату не найден')
 				return
 		except Exception as e:
-			yield tx.rollback()
-			print('Error in ShowHandler: ', e)
+			logger.exception("Unsupported file type")
 			if len(e.args) > 0 and e.args[0] == DUPLICATE_ERROR:
-				self.rollback_error(e_hdr=ERR_INSERT,
-						  e_msg='Запись с таким '\
-						  	'идентификатором уже '\
-						  	'существует')
+				self.rollback_error(tx, e_hdr=ERR_INSERT,
+						    e_msg='Запись с таким '\
+							  'идентификатором уже'\
+							  ' существует')
 			else:
-				self.rollback_error(e_hdr=ERR_500,
-						  e_msg='На сервере произошла '\
-						  	'ошибка, обратитесь к '\
-						  	'администратору')
+				self.rollback_error(tx, e_hdr=ERR_500,
+						    e_msg='На сервере '\
+							  'произошла ошибка, '\
+							  'обратитесь к '\
+							  'администратору')
 		else:
 			yield tx.commit()
 			user = self.get_current_user()
@@ -495,16 +498,83 @@ class DropHandler(BaseHandler):
 		tx = yield pool.begin()
 		try:
 			yield delete_report_by_date(tx, date)
-		except Exception as e:
-			print('Error: ', e)
+		except Exception:
+			logger.exception("Error with deleting report by date")
 			self.rollback_error(tx, e_hdr=ERR_500,
 					    e_msg='На сервере произошла '\
 						  'ошибка, обратитесь к '\
 						  'администратору')
 			return
 		tx.commit()
-		print('Report for date {} is dropped'.format(date))
 		self.redirect('/')
+
+##
+# Plot average values of parameters of all boiler rooms for the
+# choosed month.
+#
+class MonthPlotHandler(BaseHandler):
+	@tornado.gen.coroutine
+	@tornado.web.authenticated
+	def get(self):
+		if not self.check_rights(CAN_SEE_REPORTS):
+			return
+		#
+		# Need to specify both the year and the month.
+		#
+		year = self.get_argument('year', None)
+		if year is None:
+			self.render_error(e_hdr=ERR_404, e_msg='Не указан год')
+			return
+		month = self.get_argument('month', None)
+		if month is None:
+			self.render_error(e_hdr=ERR_404,
+					  e_msg='Не указан месяц')
+			return
+		try:
+			year = int(year)
+			month = int(month)
+			if year <= 0 or month <= 0:
+				raise ValueError('Illegal month or year')
+		except Exception:
+			logger.exception('Year and month must be positive '\
+					 'numbers')
+			self.render_error(e_hdr=ERR_PARAMETERS,
+					  e_msg='Год и месяц должны быть '\
+						'положительными числами')
+			return
+		tx = None
+		try:
+			start_week, month_range =\
+				calendar.monthrange(year, month)
+			tx = yield pool.begin()
+			statistics = None
+			try:
+				statistics = yield get_avg_reports_by_month(tx,
+									   year,
+									  month)
+			except Exception:
+				logger.exception('Error with getting average '\
+						 'values for month reports')
+				self.rollback_error(tx, e_hdr=ERR_500,
+						    e_msg='На сервере '\
+							  'произошла ошибка, '\
+							  'обратитесь к '\
+							  'администратору')
+				return
+			self.render('month_plot.html', month_names=month_names,
+				    month=month, year=year,
+				    month_range=month_range,
+				    statistics=statistics, get_val=get_html_val,
+				    get_float=get_html_float_to_str,
+				    get_date=get_str_date)
+			tx.commit()
+		except Exception:
+			logger.exception("Error with rendering month report")
+			if tx:
+				tx.rollback()
+			self.render_error(e_hdr=ERR_500,
+					  e_msg='Ошибка при генерации страницы')
+			return
 
 
 if __name__ == "__main__":
@@ -531,7 +601,8 @@ if __name__ == "__main__":
 			(r'/show_table', ShowHandler),
 			(r'/login', LoginHandler),
 			(r'/logout', LogoutHandler),
-			(r'/drop_report', DropHandler)
+			(r'/drop_report', DropHandler),
+			(r'/month_plot', MonthPlotHandler)
 			],
 		autoreload=True,
 		template_path="templates/",
@@ -539,5 +610,10 @@ if __name__ == "__main__":
 		cookie_secret=secret_conf.cookie_secret,
 		login_url='/login')
 	app.listen(args.port)
-	print("Server is started on ", args.port)
+	logger.setLevel(logging.DEBUG)
+	formatter = logging.Formatter('%(asctime)s - %(levelname)s - %(message)s')
+	sh = logging.StreamHandler()
+	sh.setFormatter(formatter)
+	logger.addHandler(sh)
+	logger.debug("Server is started on %s" % args.port)
 	tornado.ioloop.IOLoop.current().start()

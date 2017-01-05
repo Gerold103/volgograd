@@ -1,4 +1,4 @@
-.report_title h1, .upload_file_title h1 {
+h1 {
 	font-size: 25px;
 }
 
@@ -6,11 +6,11 @@
 	font-size: 18px;
 }
 
-.weather_panel {
+.table-control-panel {
 	padding: 0px;
 }
 
-.weather_panel .table {
+.table-control-panel .table {
 	margin: 0px;
 }
 
@@ -36,7 +36,7 @@
   white-space: nowrap;
 }
 
-.boiler_rooms_table {
+.boiler_rooms_table, .month-plot-table {
 	font-size: 12px;
 	overflow: scroll;
 	overflow-x:scroll;
@@ -44,23 +44,23 @@
 	padding: 10px;
 }
 
-.boiler_rooms_table thead {
+.boiler_rooms_table thead, .month-plot-table thead {
 	font-weight: bold;
 }
 
-.boiler_rooms_table td.danger {
+.boiler_rooms_table td.danger, .month-plot-table td.danger {
 	background: #ffbbbb;
 }
 
-.boiler_rooms_table td.danger:hover {
+.boiler_rooms_table td.danger:hover, .month-plot-table td.danger:hover {
 	background: #ffb0b0;
 }
 
-.boiler_rooms_table td.warning {
+.boiler_rooms_table td.warning, .month-plot-table td.warning {
 	background: #fffdc9;
 }
 
-.boiler_rooms_table td.warning:hover {
+.boiler_rooms_table td.warning:hover, .month-plot-table td.warning:hover {
 	background: #fffcb7;
 }
 
@@ -95,4 +95,32 @@
 
 .report-actions-panel {
 	padding: 15px;
+}
+
+.month-plot-table tbody tr {
+	cursor: pointer;
+}
+
+.plot-control-form {
+	padding-left: 20px;
+	padding-right: 20px;
+}
+
+.plot-control-form input {
+	display: inline-block;
+	width: 100px;
+	font-size: 10px;
+}
+
+.plot-control-form .input-group-addon {
+	font-size: 12px;
+}
+
+.plot-control-form .input-group {
+	max-width: 200px;
+	margin-right: 20px;
+}
+
+.plot-control-form select {
+	min-width: 300px;
 }

@@ -3,6 +3,8 @@
 
 import json
 from zipfile import BadZipFile
+import logging
+logger = logging.getLogger('volgograd_log.xml_parser')
 
 import xlrd
 from openpyxl import load_workbook
@@ -301,9 +303,9 @@ def parse_xls(file):
 	try:
 		wb = load_workbook(filename=file, data_only=True)
 	except BadZipFile:
-		print("Can't open xls, try to use xlrd...")
+		logger.warning("Can't open xls, try to use xlrd...")
 		wb = open_xls_as_xlsx(file)
-		print('Success')
+		logger.warning('Success')
 	a = wb.active
 	if get_cell(a, 1, 2) == 'Сводные данные о работе котельных  МУП '\
 				'"ВКХ" на':
