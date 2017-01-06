@@ -39,6 +39,8 @@
 		 'deviation_to': 'all_day_expected_temp1',
 		 'border_low': -0.03,
 		 'border_up': 0.03,
+		 'plot_border_up': 3,
+		 'plot_border_low': -3,
 		},
 		{'title': 'T обр. откл. %',
 		 'id': 'day_average_temp_deviation2',
@@ -47,6 +49,8 @@
 		 'deviation_to': 'all_day_expected_temp2',
 		 'border_low': -0.03,
 		 'border_up': 0.03,
+		 'plot_border_up': 3,
+		 'plot_border_low': -3,
 		}
 	]},
 	{'title': 'Температура<br>ночью', 'childs': [
@@ -61,6 +65,8 @@
 		 'deviation_to': 'all_night_expected_temp1',
 		 'border_low': -0.03,
 		 'border_up': 0.03,
+		 'plot_border_up': 3,
+		 'plot_border_low': -3,
 		},
 		{'title': 'T обр. откл. %',
 		 'id': 'night_average_temp_deviation2',
@@ -69,6 +75,8 @@
 		 'deviation_to': 'all_night_expected_temp2',
 		 'border_low': -0.03,
 		 'border_up': 0.03,
+		 'plot_border_up': 3,
+		 'plot_border_low': -3,
 		}
 	]},
 	{'title': 'Давление<br>в сети', 'childs': [
@@ -90,6 +98,7 @@
 		 'deviation_from': 'make_up_water_consum_real_ph',
 		 'deviation_to': 'make_up_water_consum_expected_ph',
 		 'border_up': 0,
+		 'plot_border_up': 0
 		}
 	]},
 	{'title': 'Жесткость', 'id': 'hardness'},
@@ -156,7 +165,14 @@
 			{% for item in table_struct %}
 				{% if 'childs' in item %}
 					{% set first = item['childs'][0] %}
-					<tr align="center" id="{{ first['id'] }}" name="{{ first['name'] }}" data-offset="2">
+					<tr align="center" id="{{ first['id'] }}" name="{{ first['name'] }}" data-offset="2"
+						{% if 'plot_border_up' in first %}
+							data-plot-border-up="{{ first['plot_border_up'] }}"
+						{% end %}
+						{% if 'plot_border_low' in first %}
+							data-plot-border-low="{{ first['plot_border_low'] }}"
+						{% end %}
+					>
 						<td rowspan="{{ len(item['childs']) }}">
 							{{ item['title'] }}
 						</td>
@@ -191,7 +207,14 @@
 						</tr>
 						{% if i + 1 < childs_count %}
 							{% set next = item['childs'][i + 1] %}
-							<tr align="center" id="{{ next['id'] }}" name="{{ next['name'] }}" data-offset="1">
+							<tr align="center" id="{{ next['id'] }}" name="{{ next['name'] }}" data-offset="1"
+								{% if 'plot_border_up' in next %}
+									data-plot-border-up="{{ next['plot_border_up'] }}"
+								{% end %}
+								{% if 'plot_border_low' in next %}
+									data-plot-border-low="{{ next['plot_border_low'] }}"
+								{% end %}
+							>
 						{% end %}
 					{% end %}
 				{% else %}
@@ -211,7 +234,7 @@
 	data.labels = [ {{ ",".join(list(map(lambda x: str(x), range(1, month_range + 1)))) }} ];
 	data.datasets = [{
 		label: 'Значения', fill: false, backgroundColor: 'rgb(75, 192, 192)',
-		borderColor: 'rgb(75, 192, 192)', borderDash: [5, 5]
+		borderColor: 'rgb(75, 192, 192)'
 	}];
 	var options = {
 		responsive: true,
@@ -252,6 +275,14 @@
 		var name_array = childs.slice(0, offset);
 		var name = $tr.attr("name");
 		var jvalues = childs.slice(offset);
+		var plot_border_up = NaN;
+		var plot_border_low = NaN;
+		if ($tr[0].hasAttribute('data-plot-border-up')) {
+			plot_border_up = $tr.attr('data-plot-border-up');
+		}
+		if ($tr[0].hasAttribute('data-plot-border-low')) {
+			plot_border_low = $tr.attr('data-plot-border-low');
+		}
 		var values = [];
         	jvalues.map(function(k, v) {
         		if (v.innerHTML != '-')
@@ -263,7 +294,31 @@
 			window.myLine.destroy();
 		}
 		var ctx = document.getElementById("plot").getContext("2d");
-		data.datasets[0].data = values;
+		var values_set = {
+			label: 'Значения', fill: false, backgroundColor: 'rgb(75, 192, 192)',
+			borderColor: 'rgb(75, 192, 192)', data: values
+		};
+		data.datasets = [];
+		data.datasets.push(values_set);
+
+		if (!isNaN(plot_border_up)) {
+			var up_border_set = {
+				label: 'Верхняя граница', fill: false, backgroundColor: '#ffbbbb',
+				borderColor: '#ffbbbb', data: []
+			};
+			for (var i = 0; i < values.length; ++i)
+				up_border_set.data.push(plot_border_up);
+			data.datasets.push(up_border_set);
+		}
+		if (!isNaN(plot_border_low)) {
+			var low_border_set = {
+				label: 'Нижняя граница', fill: false, backgroundColor: '#e4dd28',
+				borderColor: '#e4dd28', data: []
+			};
+			for (var i = 0; i < values.length; ++i)
+				low_border_set.data.push(plot_border_low);
+			data.datasets.push(low_border_set);
+		}
 		options.title.text = name;
 		window.myLine = new Chart(ctx, {type: 'line', data: data, options: options});
         };
