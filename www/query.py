@@ -53,6 +53,50 @@ def get_report_dates_by_year(tx, year):
 	return cursor.fetchall()
 
 @tornado.gen.coroutine
+def get_boiler_room_ids_and_titles(tx):
+	sql = "SELECT boiler_rooms.id, boiler_rooms.name, districts.name "\
+	      "from boiler_rooms JOIN districts ON(districts.id = district_id)";
+	cursor = yield tx.execute(query=sql)
+	tuples = cursor.fetchall()
+	res = []
+	for t in tuples:
+		res.append({'id': t[0], 'title': "%s - %s" % (t[2], t[1])})
+	return res
+
+@tornado.gen.coroutine
+def get_boiler_year_report(tx, id, year, columns):
+	sql = "SELECT date, {} FROM reports JOIN boiler_room_reports "\
+	      "ON(reports.id = report_id) WHERE YEAR(date) = %s AND "\
+	      "boiler_room_id = %s"\
+	      .format(",".join(columns))
+	params = (year, id)
+	cursor = yield tx.execute(query=sql, params=params)
+	data = cursor.fetchall()
+	res = {}
+	for row in data:
+		params = {}
+		date = row[0]
+		day = date.timetuple().tm_yday
+		i = 1
+		for col in columns:
+			params[col] = row[i]
+			i += 1
+		res[day] = params
+	return res
+
+@tornado.gen.coroutine
+def get_year_temperature(tx, year):
+	sql = "SELECT date, temp_average_air FROM reports WHERE YEAR(date) = %s"
+	params = (year, )
+	cursor = yield tx.execute(query=sql, params=params)
+	data = cursor.fetchall()
+	res = {}
+	for row in data:
+		day = row[0].timetuple().tm_yday
+		res[day] = row[1]
+	return res
+
+@tornado.gen.coroutine
 def delete_report_by_date(tx, date):
 	sql = "DELETE FROM reports WHERE date = %s"
 	params = (date, )
@@ -69,7 +113,7 @@ def delete_report_by_date(tx, date):
 @tornado.gen.coroutine
 def get_district_by_name(tx, name, cols):
 	sql = "SELECT {} FROM districts WHERE name = %s".format(cols)
-	params = (name)
+	params = (name, )
 	cursor = yield tx.execute(query=sql, params=params)
 	return cursor.fetchone()
 
@@ -79,7 +123,7 @@ def get_district_by_name(tx, name, cols):
 @tornado.gen.coroutine
 def insert_district(tx, name):
 	sql = "INSERT INTO districts(name) VALUES (%s)"
-	params = (name)
+	params = (name, )
 	yield tx.execute(query=sql, params=params)
 
 ##

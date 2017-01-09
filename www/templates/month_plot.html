@@ -231,7 +231,7 @@
 </div>
 <script type="text/javascript">
 	var data = {};
-	data.labels = [ {{ ",".join(list(map(lambda x: str(x), range(1, month_range + 1)))) }} ];
+	var days_count = {{ month_range }};
 	data.datasets = [{
 		label: 'Значения', fill: false, backgroundColor: 'rgb(75, 192, 192)',
 		borderColor: 'rgb(75, 192, 192)'
@@ -268,7 +268,7 @@
 			}]
 		}
 	};
-        function plot_parameter(name) {
+	function plot_parameter(name, restrictions) {
 		var $tr = $("#"+name);
 		var offset = $tr.attr("data-offset");
 		var childs = $tr.children();
@@ -284,12 +284,24 @@
 			plot_border_low = $tr.attr('data-plot-border-low');
 		}
 		var values = [];
-        	jvalues.map(function(k, v) {
-        		if (v.innerHTML != '-')
-        			values.push(parseFloat(v.innerHTML));
-        		else
-        			values.push(NaN);
-        	});
+		var labels = [];
+		var x = 0;
+		jvalues.map(function(k, v) {
+			++x;
+			if ('x_min' in restrictions &&
+			    restrictions.x_min != '' &&
+			    x < restrictions.x_min)
+				return;
+			if ('x_max' in restrictions &&
+			    restrictions.x_max != '' &&
+			    x > restrictions.x_max)
+				return;
+			labels.push(x);
+			if (v.innerHTML != '-')
+				values.push(parseFloat(v.innerHTML));
+			else
+				values.push(NaN);
+		});
 		if ('myLine' in window) {
 			window.myLine.destroy();
 		}
@@ -298,6 +310,7 @@
 			label: 'Значения', fill: false, backgroundColor: 'rgb(75, 192, 192)',
 			borderColor: 'rgb(75, 192, 192)', data: values
 		};
+		data.labels = labels;
 		data.datasets = [];
 		data.datasets.push(values_set);
 
@@ -321,44 +334,45 @@
 		}
 		options.title.text = name;
 		window.myLine = new Chart(ctx, {type: 'line', data: data, options: options});
-        };
-        function update_plot() {
-        	var y_min = document.getElementById("plot-y-min").value;
-        	var y_max = document.getElementById("plot-y-max").value;
-        	var x_min = document.getElementById("plot-x-min").value;
-        	var x_max = document.getElementById("plot-x-max").value;
-        	var param = document.getElementById("plot-param").value;
-        	var y_ticks = {};
-        	var x_ticks = {};
-        	if (y_min != '') {
-        		y_min = parseFloat(y_min);
-        		if (y_min != NaN)
-        			y_ticks.min = y_min;
-        	}
-        	if (y_max != '') {
-        		y_max = parseFloat(y_max);
-        		if (y_max != NaN)
-        			y_ticks.max = y_max;
-        	}
-        	if (x_min != '') {
-        		x_min = parseFloat(x_min);
-        		if (x_min != NaN)
-        			x_ticks.min = x_min;
-        	}
-        	if (x_max != '') {
-        		x_max = parseFloat(x_max);
-        		if (x_max != NaN)
-        			x_ticks.max = x_max;
-        	}
-        	options.scales.xAxes[0].ticks = x_ticks;
-        	options.scales.yAxes[0].ticks = y_ticks;
-        	plot_parameter(param);
-        };
-        window.onload = function() {
-        	plot_parameter("all_day_expected_temp1");
-        };
-        $("tbody tr").click(function(e) {
-        	plot_parameter(e.currentTarget.id);
-        });
+	};
+	function update_plot() {
+		var y_min = document.getElementById("plot-y-min").value;
+		var y_max = document.getElementById("plot-y-max").value;
+		var x_min = document.getElementById("plot-x-min").value;
+		var x_max = document.getElementById("plot-x-max").value;
+		var param = document.getElementById("plot-param").value;
+		var y_ticks = {};
+		var x_ticks = {};
+		if (y_min != '') {
+			y_min = parseFloat(y_min);
+			if (y_min != NaN)
+				y_ticks.min = y_min;
+		}
+		if (y_max != '') {
+			y_max = parseFloat(y_max);
+			if (y_max != NaN)
+				y_ticks.max = y_max;
+		}
+		if (x_min != '') {
+			x_min = parseFloat(x_min);
+			if (x_min != NaN)
+				x_ticks.min = x_min;
+		}
+		if (x_max != '') {
+			x_max = parseFloat(x_max);
+			if (x_max != NaN)
+				x_ticks.max = x_max;
+		}
+		options.scales.xAxes[0].ticks = x_ticks;
+		options.scales.yAxes[0].ticks = y_ticks;
+		plot_parameter(param, { x_min: x_min, x_max: x_max,
+					y_min: y_min, y_max: y_max });
+	};
+	window.onload = function() {
+		plot_parameter("all_day_expected_temp1", { });
+	};
+	$("tbody tr").click(function(e) {
+		plot_parameter(e.currentTarget.id, { });
+	});
 </script>
 {% end %}

@@ -1,0 +1,479 @@
+{% extends "base.html" %}
+
+{% block title %}ВолКомХоз: график{% end %}
+
+{% block links %}
+<script type="text/javascript" src="{{ static_url('js/Chart.bundle.js') }}"></script>
+{% end %}
+
+{% block body %}
+<h1>Режим работы тепловых сетей, Волгоград, {{ year }}</h1>
+
+<script type="text/javascript">
+	function ideal_temperature1(x) {
+		return 67.5 - 1.5 * x;
+	};
+
+	function ideal_temperature2(x) {
+		return 130.0/3.0 - 10.0/15.0 * x;
+	};
+
+	var params_config = {
+		'all_day_expected_temp1': {
+			'title': 'Среднесуточная температура, заданная T1',
+			'ideal': {
+				'get_y': ideal_temperature1,
+				'get_low': function(x) {
+					var y = ideal_temperature1(x);
+					return y * 0.97;
+				},
+				'get_up': function(x) {
+					var y = ideal_temperature1(x);
+					return y * 1.03;
+				},
+			}
+		},
+
+		'all_day_expected_temp2': {
+			'title': 'Среднесуточная температура, заданная T2',
+			'ideal': {
+				'get_y': ideal_temperature2,
+				'get_low': function(x) {
+					var y = ideal_temperature2(x);
+					return y * 0.97;
+				},
+				'get_up': function(x) {
+					var y = ideal_temperature2(x);
+					return y * 1.03;
+				},
+			}
+		},
+
+		'all_day_real_temp1': {
+			'title': 'Среднесуточная температура, фактическая T1',
+			'ideal': {
+				'get_y': ideal_temperature1,
+				'get_low': function(x) {
+					var y = ideal_temperature1(x);
+					return y * 0.97;
+				},
+				'get_up': function(x) {
+					var y = ideal_temperature1(x);
+					return y * 1.03;
+				},
+			}
+		},
+
+		'all_day_real_temp2': {
+			'title': 'Среднесуточная температура, фактическая T2',
+			'ideal': {
+				'get_y': ideal_temperature2,
+				'get_low': function(x) {
+					var y = ideal_temperature2(x);
+					return y * 0.97;
+				},
+				'get_up': function(x) {
+					var y = ideal_temperature2(x);
+					return y * 1.03;
+				},
+			}
+		},
+
+		'all_night_expected_temp1': {
+			'title': 'Температура ночью, заданная T1',
+			'ideal': {
+				'get_y': ideal_temperature1,
+				'get_low': function(x) {
+					var y = ideal_temperature1(x);
+					return y * 0.97;
+				},
+				'get_up': function(x) {
+					var y = ideal_temperature1(x);
+					return y * 1.03;
+				},
+			}
+		},
+
+		'all_night_expected_temp2': {
+			'title': 'Температура ночью, заданная T2',
+			'ideal': {
+				'get_y': ideal_temperature2,
+				'get_low': function(x) {
+					var y = ideal_temperature2(x);
+					return y * 0.97;
+				},
+				'get_up': function(x) {
+					var y = ideal_temperature2(x);
+					return y * 1.03;
+				},
+			}
+		},
+
+		'all_night_real_temp1': {
+			'title': 'Температура ночью, фактическая T1',
+			'ideal': {
+				'get_y': ideal_temperature1,
+				'get_low': function(x) {
+					var y = ideal_temperature1(x);
+					return y * 0.97;
+				},
+				'get_up': function(x) {
+					var y = ideal_temperature1(x);
+					return y * 1.03;
+				},
+			}
+		},
+
+		'all_night_real_temp2': {
+			'title': 'Температура ночью, фактическая T2',
+			'ideal': {
+				'get_y': ideal_temperature2,
+				'get_low': function(x) {
+					var y = ideal_temperature2(x);
+					return y * 0.97;
+				},
+				'get_up': function(x) {
+					var y = ideal_temperature2(x);
+					return y * 1.03;
+				},
+			}
+		}
+	};
+
+	var year_air_temperature = [
+		{% for day in range(1, days_count + 1) %}
+			{% if day in year_temperature and year_temperature[day] != None %}
+				{{ year_temperature[day] }},
+			{% else %}
+				NaN,
+			{% end %}
+		{% end %}
+	];
+	var boiler_params = {
+		{% for item in boiler_ids %}
+			{{ item['id'] }}: {},
+		{% end %}
+	};
+	boiler_params[{{ boiler_ids[0]['id'] }}] = {
+		'{{ first_column }}': [
+			{% for day in range(1, days_count + 1) %}
+				{% if day in first_report %}
+					{{ first_report[day][first_column] }},
+				{% else %}
+					NaN,
+				{% end %}
+			{% end %}
+		]
+	};
+</script>
+
+<div class="container plot-control-form">
+	<div class="panel panel-default">
+		<div class="panel-heading">
+			Контрольная панель графика
+		</div>
+		<div class="panel-body form-inline form-group">
+			<div class="input-group">
+				<div class="input-group-addon">Минимум Oy</div>
+				<input type="text" id="plot-y-min" placeholder="по умолчанию" class="form-control">
+			</div>
+			<div class="input-group">
+				<div class="input-group-addon">Максимум Oy</div>
+				<input type="text" id="plot-y-max" placeholder="по умолчанию" class="form-control">
+			</div>
+			<div class="input-group">
+				<div class="input-group-addon">Котельная</div>
+				<select class="form-control" id="plot-boiler-id">
+					{% for item in boiler_ids %}
+						<option value="{{ item['id'] }}">{{ item['title'] }}</option>
+					{% end %}
+				</select>
+			</div>
+			<br><br>
+			<div class="input-group">
+				<div class="input-group-addon">Минимум Ox</div>
+				<input type="text" id="plot-x-min" placeholder="по умолчанию" class="form-control">
+			</div>
+			<div class="input-group">
+				<div class="input-group-addon">Максимум Ox</div>
+				<input type="text" id="plot-x-max" placeholder="по умолчанию" class="form-control">
+			</div>
+			<div class="input-group">
+				<div class="input-group-addon">Параметр</div>
+				<select class="form-control" id="plot-param">
+				</select>
+			</div>
+			<br><br>
+			<button class="btn btn-primary" onclick="update_plot();">Обновить график</button>
+		</div>
+	</div>
+</div>
+<div class="plot-container">
+	<canvas id="plot"></canvas>
+	<div class="chartjs-tooltip" id="plot-tooltip"></div>
+</div>
+<script type="text/javascript">
+	var customTooltips = function (tooltip) {
+		$(this._chart.canvas).css("cursor", "pointer");
+
+		$(".chartjs-tooltip").css({
+			opacity: 0,
+		});
+
+		if (!tooltip || !tooltip.opacity) {
+			return;
+		}
+
+		if (tooltip.dataPoints.length > 0) {
+			tooltip.dataPoints.forEach(function (dataPoint) {
+				var content = 'Воздух: ' + dataPoint.xLabel + '<br>Вода: ' + dataPoint.yLabel;
+				var $tooltip = $("#plot-tooltip");
+				$tooltip.html(content);
+				$tooltip.css({
+					opacity: 1,
+					top: dataPoint.y + "px",
+					left: dataPoint.x + "px",
+				});
+			});
+		}
+	};
+
+	var data = {};
+	data.datasets = [{
+		label: 'Значения', fill: false, backgroundColor: 'rgb(75, 192, 192)',
+		borderColor: 'rgb(75, 192, 192)'
+	}];
+	var options = {
+		responsive: true,
+		maintainAspectRatio: false,
+		title:{
+	    		display:true,
+	    		text:"{{ boiler_ids[0]['title'] }}"
+		},
+		tooltips: {
+			enabled: true,
+			mode: 'index',
+			intersect: false,
+			//custom: customTooltips
+		},
+		hover: {
+			mode: 'index',
+			intersect: false
+		},
+		scales: {
+			xAxes: [{
+				display: true,
+				scaleLabel: {
+					display: true,
+					labelString: 'Температура воздуха'
+				}
+			}],
+			yAxes: [{
+				display: true,
+				scaleLabel: {
+					display: true,
+					labelString: 'Температура нагрева'
+				}
+			}]
+		}
+	};
+	function download_and_plot_parameter(boiler_id, param_id, restrictions) {
+		$.ajax({
+			url: '/get_year_parameter',
+			data: {boiler_id: boiler_id, param_name: param_id,
+			       year: {{ year }}},
+			dataType: 'json',
+			success: function(data, text_status) {
+				console.log('Received status: ' + text_status);
+				console.log(data);
+				if ('error' in data) {
+					alert('Ошибка! ' + data['error']);
+					return;
+				}
+				if ('warning' in data) {
+					console.log('Предупреждение: ' +
+						    data['warning']);
+					return;
+				}
+				if (! ('response' in data)) {
+					alert('Ошибка!');
+					console.log('Нет ответа');
+					return;
+				}
+				var response = data['response'];
+				boiler_params[boiler_id][param_id] = [];
+				for (var i = 1; i <= {{ days_count }}; ++i) {
+					if (i in response)
+						boiler_params[boiler_id][param_id].push(response[i][param_id]);
+					else
+						boiler_params[boiler_id][param_id].push(NaN);	
+				}
+				plot_parameter(boiler_id, param_id, restrictions, false);
+			}
+		});
+		console.log('downloding...');
+	}
+	function points_compare(a, b) {
+		return a.x - b.x;
+	}
+        function plot_parameter(boiler_id, param_id, restrictions, can_upload) {
+        	var boiler = boiler_params[boiler_id];
+        	var real_values = [];
+        	var ideal_values = [];
+        	var ideal_values_low = [];
+        	var ideal_values_up = [];
+        	if (!(param_id in boiler_params[boiler_id])) {
+        		download_and_plot_parameter(boiler_id, param_id, restrictions);
+        		return;
+        	}
+        	for (var day = 0; day < {{ days_count }}; ++day) {
+        		var real_param = boiler[param_id][day];
+        		if (isNaN(year_air_temperature[day]) ||
+        		    isNaN(real_param))
+        			continue;
+        		var x = year_air_temperature[day];
+        		if ('x_min' in restrictions &&
+        		    restrictions.x_min != '' &&
+        		    x < restrictions.x_min)
+        			continue;
+        		if ('x_max' in restrictions &&
+        		    restrictions.x_max != '' &&
+        		    x > restrictions.x_max)
+        			continue;
+        		real_values.push({ x: x, y: real_param });
+        		ideal_values.push({
+        			x: x, y: params_config[param_id].ideal.get_y(x)
+        		});
+        		ideal_values_low.push({
+        			x: x, y: params_config[param_id].ideal.get_low(x)
+        		});
+        		ideal_values_up.push({
+        			x: x, y: params_config[param_id].ideal.get_up(x)
+        		});
+        	}
+
+        	ideal_values.sort(points_compare);
+        	ideal_values_low.sort(points_compare);
+        	ideal_values_up.sort(points_compare);
+        	real_values.sort(points_compare);
+
+        	var name = params_config[param_id]['title'];
+
+		if ('myLine' in window) {
+			window.myLine.destroy();
+		}
+		var ctx = document.getElementById("plot").getContext("2d");
+		var real_values_set = {
+			label: 'Реальные значения', fill: false, backgroundColor: '#8a9bff',
+			borderColor: '#8a9bff', data: real_values, type: 'bubble'
+		};
+		var ideal_values_set = {
+			label: 'Идеальные значения', fill: false, backgroundColor: '#c3ffcd',
+			borderColor: '#c3ffcd', data: ideal_values,
+			type: 'line', PointStyle: 'none', radius: 0
+		};
+		var ideal_values_set_low = {
+			label: 'Идеальные значения, нижняя граница',
+			fill: false, backgroundColor: '#e4dd28',
+			borderColor: '#e4dd28', data: ideal_values_low,
+			type: 'line', PointStyle: 'none', radius: 0,
+			borderDash: [5, 8],
+		};
+		var ideal_values_set_up = {
+			label: 'Идеальные значения, верхняя граница',
+			fill: false, backgroundColor: '#ffbbbb',
+			borderColor: '#ffbbbb', data: ideal_values_up,
+			type: 'line', PointStyle: 'none', radius: 0,
+			borderDash: [5, 8],
+		};
+		data.datasets = [];
+		data.datasets.push(real_values_set);
+		data.datasets.push(ideal_values_set);
+		data.datasets.push(ideal_values_set_low);
+		data.datasets.push(ideal_values_set_up);
+		options.title.text = name;
+		window.myLine = new Chart(ctx, {type: 'bubble', data: data, options: options});
+		var x_axis = window.myLine.scales['x-axis-0'];
+		if (x_axis.min != ideal_values[0].x) {
+			real_values.unshift({x: NaN,  y: NaN});
+			ideal_values.unshift({
+				x: x_axis.min,
+				y: params_config[param_id].ideal.get_y(x_axis.min)
+			});
+			ideal_values_low.unshift({
+				x: x_axis.min,
+				y: params_config[param_id].ideal.get_low(x_axis.min)
+			});
+			ideal_values_up.unshift({
+				x: x_axis.min,
+				y: params_config[param_id].ideal.get_up(x_axis.min)
+			});
+			window.myLine.update();
+		}
+		if (x_axis.max != ideal_values[ideal_values.length - 1].x) {
+			real_values.push({x: NaN,  y: NaN});
+			ideal_values.push({
+				x: x_axis.max,
+				y: params_config[param_id].ideal.get_y(x_axis.max)
+			});
+			ideal_values_low.push({
+				x: x_axis.max,
+				y: params_config[param_id].ideal.get_low(x_axis.max)
+			});
+			ideal_values_up.push({
+				x: x_axis.max,
+				y: params_config[param_id].ideal.get_up(x_axis.max)
+			});
+			window.myLine.update();
+		}
+        };
+        function update_plot() {
+        	var y_min = document.getElementById("plot-y-min").value;
+        	var y_max = document.getElementById("plot-y-max").value;
+        	var x_min = document.getElementById("plot-x-min").value;
+        	var x_max = document.getElementById("plot-x-max").value;
+        	var boiler_id = document.getElementById("plot-boiler-id").value;
+        	var param = document.getElementById("plot-param").value;
+        	var y_ticks = {};
+        	var x_ticks = {};
+        	if (y_min != '') {
+        		y_min = parseFloat(y_min);
+        		if (y_min != NaN)
+        			y_ticks.min = y_min;
+        	}
+        	if (y_max != '') {
+        		y_max = parseFloat(y_max);
+        		if (y_max != NaN)
+        			y_ticks.max = y_max;
+        	}
+        	if (x_min != '') {
+        		x_min = parseFloat(x_min);
+        		if (x_min != NaN)
+        			x_ticks.min = x_min;
+        	}
+        	if (x_max != '') {
+        		x_max = parseFloat(x_max);
+        		if (x_max != NaN)
+        			x_ticks.max = x_max;
+        	}
+        	options.scales.xAxes[0].ticks = x_ticks;
+        	options.scales.yAxes[0].ticks = y_ticks;
+        	plot_parameter(boiler_id, param, {x_min: x_min, x_max: x_max,
+        					  y_min: y_min, y_max: y_max}, true);
+        };
+        window.onload = function() {
+        	var select_param = document.getElementById('plot-param');
+        	for (var id in params_config) {
+        		var param = params_config[id];
+        		var option = document.createElement('option');
+        		option.setAttribute('value', id);
+        		option.innerHTML = param['title'];
+        		select_param.appendChild(option);
+        	}
+
+        	plot_parameter({{ boiler_ids[0]['id'] }},
+        		       "{{ first_column }}", {}, false);
+        };
+</script>
+
+{% end %}

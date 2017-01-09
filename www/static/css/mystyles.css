@@ -124,3 +124,26 @@ h1 {
 .plot-control-form select {
 	min-width: 300px;
 }
+
+.plot-container {
+	position: relative;
+	height: 600px;
+}
+
+.chartjs-tooltip {
+	opacity: 1;
+	position: absolute;
+	background: rgba(0, 0, 0, .7);
+	color: white;
+	border-radius: 3px;
+	transition: all .1s ease;
+	pointer-events: none;
+	transform: translate(-50%, 0);
+	padding: 4px;
+}
+
+.chartjs-tooltip-key {
+	display: inline-block;
+	width: 10px;
+	height: 10px;
+}

@@ -4,7 +4,9 @@
 
 {% block body %}
 
+{% block error_message %}
 <div class="alert alert-danger" role="alert"><b>{{ error_header }}!</b> {{ error_msg }}</div>
+{% end %}
 
 {% block error_details %}
 {% end %}

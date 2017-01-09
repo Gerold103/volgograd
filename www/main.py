@@ -88,11 +88,12 @@ class BaseHandler(tornado.web.RequestHandler):
 	#               actions.
 	#
 	@tornado.web.authenticated
-	def check_rights(self, rights):
+	def check_rights(self, rights, render=True):
 		user_rights = int(self.get_secure_cookie('rights'))
 		if not (rights & user_rights):
-			self.render_error(e_hdr=ERR_ACCESS,
-					  e_msg='Доступ запрещен')
+			if render:
+				self.render_error(e_hdr=ERR_ACCESS,
+						  e_msg='Доступ запрещен')
 			return False
 		return True
 
@@ -579,6 +580,89 @@ class MonthPlotHandler(BaseHandler):
 					  e_msg='Ошибка при генерации страницы')
 			return
 
+class YearPlotHandler(BaseHandler):
+	@tornado.gen.coroutine
+	@tornado.web.authenticated
+	def get(self):
+		if not self.check_rights(CAN_SEE_REPORTS):
+			return
+		year = self.get_argument('year', None)
+		if year is None:
+			self.render_error(e_hdr=ERR_404, e_msg='Не указан год')
+			return
+		try:
+			year = int(year)
+			if year <= 0:
+				raise ValueError('Illegal year')
+		except Exception:
+			logger.exception('Year must be positive number')
+			self.render_error(e_hdr=ERR_PARAMETERS,
+					  e_msg='Год должен быть положительным'\
+						' числом')
+			return
+		days = calendar.isleap(year) and 366 or 365
+		tx = None
+		try:
+			tx = yield pool.begin()
+			ids = yield get_boiler_room_ids_and_titles(tx)
+			column = ['all_day_expected_temp1']
+			first_report = yield get_boiler_year_report(tx, ids[0]['id'],
+								    year,
+								    column)
+			year_temperature = yield get_year_temperature(tx, year)
+			self.render("year_plot.html", year=year, days_count=days,
+				    boiler_ids=ids, first_report=first_report,
+				    first_column=column[0],
+				    year_temperature=year_temperature)
+			tx.commit()
+		except:
+			logger.exception('Error with getting boiler room ids '\
+					 'and reports about first room')
+			self.rollback_error(tx, e_hdr=ERR_500,
+					    e_msg='На сервере произошла '\
+						  'ошибка, обратитесь к '\
+						  'администратору')
+			return
+
+class GetYearParameterHandler(BaseHandler):
+	@tornado.gen.coroutine
+	@tornado.web.authenticated
+	def get(self):
+		if not self.check_rights(CAN_SEE_REPORTS, render=False):
+			self.write(json.dumps({ 'error': 'У вас нет прав на '\
+							 'это действие' }))
+			return
+		boiler_id = self.get_argument('boiler_id', None)
+		if boiler_id is None:
+			self.write(json.dumps({ 'warning': 'Не указан аргумент'\
+							   ' boiler_id' }))
+			return
+		param_name = self.get_argument('param_name', None)
+		if param_name is None:
+			self.write(json.dumps({ 'warning': 'Не указан аргумент'\
+							   ' param_name' }))
+			return
+		year = self.get_argument('year', None)
+		if year is None:
+			self.write(json.dumps({ 'warning': 'Не указан аргумент'\
+							   ' year' }))
+			return
+		tx = None
+		try:
+			tx = yield pool.begin()
+			report = yield get_boiler_year_report(tx, boiler_id,
+							      year,
+							      [param_name, ])
+			self.write(json.dumps({'response': report}))
+			tx.commit()
+		except:
+			logger.exception('Error with getting boiler room ids '\
+					 'and reports about first room')
+			tx.rollback()
+			self.write(json.dumps({
+				'warning': 'На сервере произошла ошибка, '\
+				'обратитесь к администратору'}))
+			return
 
 if __name__ == "__main__":
 	parser = argparse.ArgumentParser(description='VolComHoz')
@@ -605,7 +689,9 @@ if __name__ == "__main__":
 			(r'/login', LoginHandler),
 			(r'/logout', LogoutHandler),
 			(r'/drop_report', DropHandler),
-			(r'/month_plot', MonthPlotHandler)
+			(r'/month_plot', MonthPlotHandler),
+			(r'/year_plot', YearPlotHandler),
+			(r'/get_year_parameter', GetYearParameterHandler)
 			],
 		autoreload=True,
 		template_path="templates/",
