@@ -63,9 +63,10 @@ class BaseHandler(tornado.web.RequestHandler):
 	##
 	# Render an error page with specified an error header and a message.
 	#
-	def render_error(self, e_hdr, e_msg):
-		self.render('error_page.html', error_header=e_hdr,
-			    error_msg=e_msg)
+	def render_error(self, e_hdr, e_msg, template='error_page.html',
+			 **kwargs):
+		self.render(template, error_header=e_hdr,
+			    error_msg=e_msg, **kwargs)
 
 	##
 	# Render an error page, flush it to the user and then rollback
@@ -281,7 +282,9 @@ class ShowHandler(BaseHandler):
 		if not uploaded_days:
 			self.render_error(e_hdr=ERR_404,
 					  e_msg='За указанный год %s отчетов '\
-						'не найдено' % year)
+						'не найдено' % year,
+					  template='choose_day_year_error.html',
+					  year=year)
 			return
 		months = []
 		#

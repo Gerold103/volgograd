@@ -1,0 +1,21 @@
+{% extends "error_page.html" %}
+
+{% block title %}ВолКомХоз: Таблица за день{% end %}
+
+{% block error_details %}
+
+<p>Похоже, за этот год ничего не найдено. Попробуйте выбрать другой год:</p>
+<ul class="pager">
+	<li class="previous" style="float: left;">
+		<a href="/show_table?year={{ year - 1 }}">
+			<span aria-hidden="true">&larr;</span> {{ year - 1 }}
+		</a>
+	</li>
+	<li class="next" style="float: left;">
+		<a href="/show_table?year={{ year + 1 }}">
+			{{ year + 1 }} <span aria-hidden="true">&rarr;</span>
+		</a>
+	</li>
+</ul>
+
+{% end %}
