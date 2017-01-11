@@ -36,7 +36,7 @@ h1 {
   white-space: nowrap;
 }
 
-.boiler_rooms_table, .month-plot-table {
+.boiler_rooms_table {
 	font-size: 12px;
 	overflow: scroll;
 	overflow-x:scroll;
@@ -44,23 +44,23 @@ h1 {
 	padding: 10px;
 }
 
-.boiler_rooms_table thead, .month-plot-table thead {
+.boiler_rooms_table thead {
 	font-weight: bold;
 }
 
-.boiler_rooms_table td.danger, .month-plot-table td.danger {
+.boiler_rooms_table td.danger {
 	background: #ffbbbb;
 }
 
-.boiler_rooms_table td.danger:hover, .month-plot-table td.danger:hover {
+.boiler_rooms_table td.danger:hover {
 	background: #ffb0b0;
 }
 
-.boiler_rooms_table td.warning, .month-plot-table td.warning {
+.boiler_rooms_table td.warning {
 	background: #fffdc9;
 }
 
-.boiler_rooms_table td.warning:hover, .month-plot-table td.warning:hover {
+.boiler_rooms_table td.warning:hover {
 	background: #fffcb7;
 }
 

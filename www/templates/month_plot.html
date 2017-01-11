@@ -147,7 +147,7 @@
 	</div>
 </div>
 <canvas id="plot" style="max-height: 600px;"></canvas>
-<div class="container-fluid month-plot-table" align="center">
+<div class="container-fluid boiler_rooms_table month-plot-table" align="center">
 	<table class="table table-bordered table-striped table-hover">
 		<thead>
 			<tr align="center">
@@ -229,52 +229,15 @@
 		</tbody>
 	</table>
 </div>
+
+{% include "plot_builder.html" %}
+
 <script type="text/javascript">
-	var data = {};
-	var days_count = {{ month_range }};
-	data.datasets = [{
-		label: 'Значения', fill: false, backgroundColor: 'rgb(75, 192, 192)',
-		borderColor: 'rgb(75, 192, 192)'
-	}];
-	var options = {
-		responsive: true,
-		maintainAspectRatio: false,
-		title:{
-	    		display:true,
-	    		text:'Среднесуточная температура, факт. Т1'
-		},
-		tooltips: {
-			mode: 'index',
-			intersect: false,
-		},
-		hover: {
-			mode: 'nearest',
-			intersect: true
-		},
-		scales: {
-			xAxes: [{
-				display: true,
-				scaleLabel: {
-					display: true,
-					labelString: 'День'
-				}
-			}],
-			yAxes: [{
-				display: true,
-				scaleLabel: {
-					display: true,
-					labelString: 'Значение'
-				}
-			}]
-		}
-	};
-	function plot_parameter(name, restrictions) {
-		var $tr = $("#"+name);
+	function plot_parameter(control_data) {
+		var $tr = $("#" + control_data.param);
+		var title = $tr.attr("name");
 		var offset = $tr.attr("data-offset");
-		var childs = $tr.children();
-		var name_array = childs.slice(0, offset);
-		var name = $tr.attr("name");
-		var jvalues = childs.slice(offset);
+		var table_values = $tr.children().slice(offset);
 		var plot_border_up = NaN;
 		var plot_border_low = NaN;
 		if ($tr[0].hasAttribute('data-plot-border-up')) {
@@ -285,94 +248,75 @@
 		}
 		var values = [];
 		var labels = [];
-		var x = 0;
-		jvalues.map(function(k, v) {
-			++x;
-			if ('x_min' in restrictions &&
-			    restrictions.x_min != '' &&
-			    x < restrictions.x_min)
+		var day = 0;
+		table_values.map(function(k, v) {
+			++day;
+
+			/*
+			 * Skip all points bigger or smaller
+			 * Ox borders.
+			 */
+			if ('x_min' in control_data && day < control_data.x_min)
 				return;
-			if ('x_max' in restrictions &&
-			    restrictions.x_max != '' &&
-			    x > restrictions.x_max)
+			if ('x_max' in control_data && day > control_data.x_max)
 				return;
-			labels.push(x);
+
+			labels.push(day);
 			if (v.innerHTML != '-')
 				values.push(parseFloat(v.innerHTML));
 			else
+				/*
+				 * Need to add NaN to show gaps on
+				 * the plot.
+				 */
 				values.push(NaN);
 		});
-		if ('myLine' in window) {
-			window.myLine.destroy();
+
+		/*
+		 * Recreate the plot if exists to show new data
+		 * and delete old.
+		 */
+		if (plot_is_created()) {
+			get_plot_object().destroy();
 		}
-		var ctx = document.getElementById("plot").getContext("2d");
-		var values_set = {
-			label: 'Значения', fill: false, backgroundColor: 'rgb(75, 192, 192)',
-			borderColor: 'rgb(75, 192, 192)', data: values
-		};
-		data.labels = labels;
-		data.datasets = [];
-		data.datasets.push(values_set);
+		plot_clear_data();
+		plot_set_labels(labels);
+		plot_add_data({ label: 'Значения', color: 'rgb(75, 192, 192)',
+			        data: values });
 
 		if (!isNaN(plot_border_up)) {
-			var up_border_set = {
-				label: 'Верхняя граница', fill: false, backgroundColor: '#ffbbbb',
-				borderColor: '#ffbbbb', data: []
-			};
+			var up_data = []
 			for (var i = 0; i < values.length; ++i)
-				up_border_set.data.push(plot_border_up);
-			data.datasets.push(up_border_set);
+				up_data.push(plot_border_up);
+			plot_add_data({ label: 'Верхняя граница',
+					color: '#ffbbbb', data: up_data });
 		}
 		if (!isNaN(plot_border_low)) {
-			var low_border_set = {
-				label: 'Нижняя граница', fill: false, backgroundColor: '#e4dd28',
-				borderColor: '#e4dd28', data: []
-			};
+			var low_data = [];
 			for (var i = 0; i < values.length; ++i)
-				low_border_set.data.push(plot_border_low);
-			data.datasets.push(low_border_set);
+				low_data.push(plot_border_low);
+			plot_add_data({ label: 'Нижняя граница',
+					color: '#e4dd28', data: low_data });
 		}
-		options.title.text = name;
-		window.myLine = new Chart(ctx, {type: 'line', data: data, options: options});
+		plot_set_title(title);
+		plot_object_set(new Chart(get_plot_DOM(),
+				{ type: 'line', data: plot_data,
+				  options: plot_options }));
 	};
-	function update_plot() {
-		var y_min = document.getElementById("plot-y-min").value;
-		var y_max = document.getElementById("plot-y-max").value;
-		var x_min = document.getElementById("plot-x-min").value;
-		var x_max = document.getElementById("plot-x-max").value;
+
+	function read_param(control_data) {
 		var param = document.getElementById("plot-param").value;
-		var y_ticks = {};
-		var x_ticks = {};
-		if (y_min != '') {
-			y_min = parseFloat(y_min);
-			if (y_min != NaN)
-				y_ticks.min = y_min;
-		}
-		if (y_max != '') {
-			y_max = parseFloat(y_max);
-			if (y_max != NaN)
-				y_ticks.max = y_max;
-		}
-		if (x_min != '') {
-			x_min = parseFloat(x_min);
-			if (x_min != NaN)
-				x_ticks.min = x_min;
-		}
-		if (x_max != '') {
-			x_max = parseFloat(x_max);
-			if (x_max != NaN)
-				x_ticks.max = x_max;
-		}
-		options.scales.xAxes[0].ticks = x_ticks;
-		options.scales.yAxes[0].ticks = y_ticks;
-		plot_parameter(param, { x_min: x_min, x_max: x_max,
-					y_min: y_min, y_max: y_max });
+		control_data.param = param;
 	};
+
+	plot_set_builder(plot_parameter);
+	plot_set_param_reader(read_param);
+
 	window.onload = function() {
-		plot_parameter("all_day_expected_temp1", { });
+		plot_parameter({ param: "all_day_expected_temp1" });
 	};
 	$("tbody tr").click(function(e) {
-		plot_parameter(e.currentTarget.id, { });
+		plot_parameter({ param: e.currentTarget.id });
 	});
 </script>
 {% end %}
