@@ -52,6 +52,9 @@ def get_report_dates_by_year(tx, year):
 	cursor = yield tx.execute(query=sql, params=params)
 	return cursor.fetchall()
 
+##
+# Get identifiers and titles of all boiler rooms.
+#
 @tornado.gen.coroutine
 def get_boiler_room_ids_and_titles(tx):
 	sql = "SELECT boiler_rooms.id, boiler_rooms.name, districts.name "\
@@ -63,6 +66,22 @@ def get_boiler_room_ids_and_titles(tx):
 		res.append({'id': t[0], 'title': "%s - %s" % (t[2], t[1])})
 	return res
 
+##
+# Get parameters of the specified boiler room alog the year.
+# @param tx      Current transaction.
+# @param id      Identifier of the boiler room.
+# @param year    Year along which need to gather parameters.
+# @param columns List of the table columns needed to fetch.
+#
+# @retval Dictionary of the following format:
+#         ...
+#         day_number: {
+#         	parameter1_of_this_day: [val1, val2, ..., val_days_count],
+#         	....
+#         	parameterN_of_this_day: [val1, val2, ..., val_days_count],
+#         },
+#         ...
+#
 @tornado.gen.coroutine
 def get_boiler_year_report(tx, id, year, columns):
 	sql = "SELECT date, {} FROM reports JOIN boiler_room_reports "\
@@ -84,6 +103,12 @@ def get_boiler_year_report(tx, id, year, columns):
 		res[day] = params
 	return res
 
+##
+# Get air temperature of all days in the specified year.
+# @param year Year in which need to get air temperatures.
+# @retval Dictionary with keys as day numbers and values as
+#         temperatures.
+#
 @tornado.gen.coroutine
 def get_year_temperature(tx, year):
 	sql = "SELECT date, temp_average_air FROM reports WHERE YEAR(date) = %s"
@@ -96,6 +121,9 @@ def get_year_temperature(tx, year):
 		res[day] = row[1]
 	return res
 
+##
+# Delete report by the specified date.
+#
 @tornado.gen.coroutine
 def delete_report_by_date(tx, date):
 	sql = "DELETE FROM reports WHERE date = %s"

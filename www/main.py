@@ -89,8 +89,9 @@ class BaseHandler(tornado.web.RequestHandler):
 	#
 	@tornado.gen.coroutine
 	def rollback_error(self, tx, e_hdr, e_msg):
-			self.render_error(e_hdr=e_hdr, e_msg=e_msg)
-			yield self.flush()
+		self.render_error(e_hdr=e_hdr, e_msg=e_msg)
+		yield self.flush()
+		if tx:
 			yield tx.rollback()
 
 	##
@@ -505,8 +506,6 @@ class DropHandler(BaseHandler):
 	@tornado.web.authenticated
 	def get(self):
 		if not self.check_rights(CAN_DELETE_REPORTS):
-			self.render_error(e_hdr=ERR_ACCESS,
-					  e_msg='Вы не можете удалять отчеты')
 			return
 		date = self.get_argument('date', None)
 		if date is None:
@@ -594,6 +593,10 @@ class MonthPlotHandler(BaseHandler):
 					  e_msg='Ошибка при генерации страницы')
 			return
 
+##
+# Show the plot with values of one parameter of one boiler along
+# the specified year.
+#
 class YearPlotHandler(BaseHandler):
 	@tornado.gen.coroutine
 	@tornado.web.authenticated
@@ -619,13 +622,15 @@ class YearPlotHandler(BaseHandler):
 		try:
 			tx = yield pool.begin()
 			ids = yield get_boiler_room_ids_and_titles(tx)
-			column = ['all_day_expected_temp1']
-			first_report = yield get_boiler_year_report(tx, ids[0]['id'],
-								    year,
-								    column)
+			column = ['all_day_expected_temp1', ]
+			first_id = ids[0]['id']
+			first_report =
+				yield get_boiler_year_report(tx, first_id,
+							     year, column)
 			year_temperature = yield get_year_temperature(tx, year)
-			self.render("year_plot.html", year=year, days_count=days,
-				    boiler_ids=ids, first_report=first_report,
+			self.render("year_plot.html", year=year,
+				    days_count=days, boiler_ids=ids,
+				    first_report=first_report,
 				    first_column=column[0],
 				    year_temperature=year_temperature)
 			tx.commit()
