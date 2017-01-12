@@ -69,6 +69,20 @@ class BaseHandler(tornado.web.RequestHandler):
 			    error_msg=e_msg, **kwargs)
 
 	##
+	# Render the answer in the JSON format with the specified
+	# response data.
+	#
+	def render_json(self, data):
+		self.write(json.dumps({ 'response': data }))
+
+	##
+	# Render the error information in the JSON format with the
+	# specified error message.
+	#
+	def render_json_error(self, msg):
+		self.write(json.dumps({ 'error': msg }))
+
+	##
 	# Render an error page, flush it to the user and then rollback
 	# transaction. Such actions sequence allows the user to avoid waiting
 	# for rollback.
@@ -624,7 +638,15 @@ class YearPlotHandler(BaseHandler):
 						  'администратору')
 			return
 
+##
+# Get and return in the JSON format the parameter of the specified
+# boiler along the specified year.
+#
 class GetYearParameterHandler(BaseHandler):
+	##
+	# Need to pass patameters boiler id, parameter id and
+	# year.
+	#
 	@tornado.gen.coroutine
 	@tornado.web.authenticated
 	def get(self):
@@ -634,18 +656,17 @@ class GetYearParameterHandler(BaseHandler):
 			return
 		boiler_id = self.get_argument('boiler_id', None)
 		if boiler_id is None:
-			self.write(json.dumps({ 'warning': 'Не указан аргумент'\
-							   ' boiler_id' }))
+			self.render_json_error('Не указан идентификатор '\
+					       'бойлерной')
 			return
 		param_name = self.get_argument('param_name', None)
 		if param_name is None:
-			self.write(json.dumps({ 'warning': 'Не указан аргумент'\
-							   ' param_name' }))
+			self.render_json_error('Не указан идентификатор '\
+					       'параметра')
 			return
 		year = self.get_argument('year', None)
 		if year is None:
-			self.write(json.dumps({ 'warning': 'Не указан аргумент'\
-							   ' year' }))
+			self.render_json_error('Не указан год')
 			return
 		tx = None
 		try:
@@ -653,15 +674,14 @@ class GetYearParameterHandler(BaseHandler):
 			report = yield get_boiler_year_report(tx, boiler_id,
 							      year,
 							      [param_name, ])
-			self.write(json.dumps({'response': report}))
+			self.render_json(report)
 			tx.commit()
 		except:
-			logger.exception('Error with getting boiler room ids '\
-					 'and reports about first room')
-			tx.rollback()
-			self.write(json.dumps({
-				'warning': 'На сервере произошла ошибка, '\
-				'обратитесь к администратору'}))
+			logger.exception('Error with getting parameter')
+			if tx:
+				tx.rollback()
+			self.render_json_error('На сервере произошла ошибка, '\
+					       'обратитесь к администратору')
 			return
 
 if __name__ == "__main__":

@@ -53,6 +53,22 @@
 		}
 	};
 
+	function plot_get_x_max() {
+		return get_plot_object().scales['x-axis-0'].max;
+	};
+
+	function plot_get_x_min() {
+		return get_plot_object().scales['x-axis-0'].min;
+	};
+
+	function plot_set_xLabel(text) {
+		plot_options.scales.xAxes[0].scaleLabel.labelString = text;
+	};
+
+	function plot_set_yLabel(text) {
+		plot_options.scales.yAxes[0].scaleLabel.labelString = text;
+	};
+
 	function plot_set_builder(builder) {
 		plot_builder = builder;
 	};
@@ -81,6 +97,14 @@
 			dataset.backgroundColor = parameters.color;
 			dataset.borderColor = parameters.color;
 		}
+		if ('type' in parameters)
+			dataset.type = parameters.type;
+		if ('no_points' in parameters && parameters.no_points) {
+			dataset.PointStyle = 'none';
+			dataset.radius = 0;
+		}
+		if ('border_dash' in parameters)
+			dataset.borderDash = parameters.border_dash;
 		if (plot_data.datasets)
 			plot_data.datasets.push(dataset);
 		else
