@@ -169,3 +169,33 @@ h1 {
 .multiple-white-space {
 	white-space: pre;
 }
+
+
+.table-hover > tbody > tr.bg-primary:hover > td,
+.bg-primary > td {
+    background-color: #428bca;
+}
+
+.table-hover > tbody > tr.no-hover:hover,
+.table-hover > tbody > tr.no-hover:hover {
+    background-color: inherit;
+}
+
+.pagination a:hover {
+	cursor: pointer;
+}
+
+.table td.long_text {
+    max-width: 400px;
+}
+.table td.long_text span {
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    display: inline-block;
+    max-width: 100%;
+}
+
+.popover {
+	color: #333;
+}

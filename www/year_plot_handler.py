@@ -55,4 +55,3 @@ class YearPlotHandler(BaseHandler):
 			logger.exception('Error with getting boiler room ids '\
 					 'and reports about first room')
 			self.rollback_error(tx, e_hdr=ERR_500)
-			return
