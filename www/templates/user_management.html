@@ -1,0 +1,52 @@
+{% extends "base.html" %}
+
+{% block title %}ВолКомХоз: Главная{% end %}
+
+{% block body %}
+
+<div class="container-fluid row">
+	<div class="col-sm-8">
+		<table class="table table-striped table_hover">
+			<thead>
+				<tr>
+					<th>Имя</th>
+					<th>Почта</th>
+				</tr>
+			</thead>
+			<tbody>
+				<tr>
+					<td>medvi</td>
+					<td>tc-sport@yandex.ru</td>
+				</tr>
+				<tr>
+					<td>dmedvedev</td>
+					<td>dmedvedev@cs.msu.ru</td>
+				</tr>
+				<tr>
+					<td>medvi_dinya</td>
+					<td>medvidinya@gmail.com</td>
+				</tr>
+				<tr>
+					<td>medvi_dinya</td>
+					<td>medvidinya@gmail.com</td>
+				</tr>
+				<tr>
+					<td>medvi_dinya</td>
+					<td>medvidinya@gmail.com</td>
+				</tr>
+				<tr>
+					<td>medvi_dinya</td>
+					<td>medvidinya@gmail.com</td>
+				</tr>
+			</tbody>
+		</table>
+	</div>
+
+	<div class="col-sm-2">
+		<a href="/user_managment/add" class="btn btn-default btn-lg btn-block">Добавить</a>
+		<a href="/user_managment/delete" class="btn btn-default btn-lg btn-block">Удалить</a>
+		<a href="/user_managment/edit" class="btn btn-default btn-lg btn-block">Редактировать</a>
+	</div>
+</div>
+
+{% end %}

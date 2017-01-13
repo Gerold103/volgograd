@@ -1,0 +1,142 @@
+{% extends "../base.html" %}
+
+{% block title %}ВолКомХоз: Управление пользователями{% end %}
+
+{% block body %}
+
+<div class="container-fluid">
+	<h2 class="col-md-12" style="margin:20px 0">Управление пользователями</h2>
+	<h5 class="col-md-12">{{ success_action_message }}</h5>
+	<div class="col-md-8">
+		<table class="table table-hover" id="users_table">
+			<thead>
+				<tr>
+					<th></th>
+					<th>№</th>
+					<th>Имя</th>
+					<th>Почта</th>
+				</tr>
+			</thead>
+			<tbody>
+				{% for i in range((page-1)*num_in_page, page*num_in_page) %}
+					{% if i < len(users) %}
+						<tr class="clickable-row" data-toggle="collapse" data-target="#row_details_{{ i }}" class="accordion-toggle">
+							<td>    
+								<div class="input-group">
+									<span class="glyphicon glyphicon-chevron-right"></span>
+								</div>
+							</td>
+							<td>{{ i+1 }}</td>
+							<td class="long_text"><span>{{ users[i][0] }}</span></td>
+							<td class="long_text"><span>{{ users[i][1] }}</span></td>
+						</tr>
+						<tr class="no-hover">
+					        <td colspan="6" class="hiddenRow" style="padding: 0; border-width: 0;" >
+					        	<div id="row_details_{{ i }}" class="accordian-body collapse row_details">
+					        	<ul>
+				        		{% for index, perm in enumerate(users[i][3]) %}
+									<li>
+									{{ perm }}<br>
+									</li>
+								{% end %}
+								</ul>
+								{% if len(users[i][3]) == 0 %}
+									Нет прав на данном сайте
+								{% end %%}
+					        	</div>
+					        </td>
+					    </tr>
+					{% end %}
+				{% end %}
+			</tbody>
+		</table>
+
+		<!-- PAGINATOR -->
+		<ul class="pagination">
+			<li class="page-item {% if page == 1 %} disabled {% end %}">
+					<a class="page-link" onclick="PrevButtonClick(this)" id="prev_link" {% if page == 1 %} disabled {% end %}>Назад</a>
+				</li>
+				</li>
+			{% for i in range(num_of_pages) %}
+						{% if i+1 == page %}
+							<li class="page-item active">
+						{% else %}
+							<li class="page-item">
+						{% end %}
+						<a class="page-link" href="/users_management?page={{ i+1 }}">{{ i+1 }}</a>
+					</li>
+			{% end %}
+				<li class="page-item {% if page == num_of_pages %} disabled {% end %}">
+					<a class="page-link" onclick="NextButtonClick(this)" id="next_link" {% if page == num_of_pages %} disabled {% end %}>Вперед</a>
+				</li>
+		</ul>
+
+		<!-- select the row of a table-->
+		<script>
+			$('#users_table').on('click', '.clickable-row', function(event) {
+				if($(this).hasClass('bg-primary')){
+					$(this).removeClass('bg-primary'); 
+				} else {
+					$(this).addClass('bg-primary').siblings().removeClass('bg-primary');
+				}
+			});
+		</script>
+	</div>
+
+	{% if enable_edit %}
+		<div class="col-md-2">
+			<a href="/users_management/add" class="btn btn-default btn-lg btn-block">Добавить</a>
+			<a href="/users_management/delete" class="btn btn-default btn-lg btn-block">Удалить</a>
+			<a href="/users_management/edit" class="btn btn-default btn-lg btn-block">Редактировать</a>
+		</div>
+	{% end %}
+
+	<!-- change a glyphicon when permissions are shown (hidden) -->
+	<script>
+		$('div.collapse').on('show.bs.collapse', function() {
+			$(this).parent().parent().prev().find('.glyphicon').toggleClass('glyphicon-chevron-right').toggleClass('glyphicon-chevron-down');
+		});
+		$('div.collapse').on('hide.bs.collapse', function() {
+			$(this).parent().parent().prev().find('.glyphicon').toggleClass('glyphicon-chevron-right').toggleClass('glyphicon-chevron-down');
+		});
+	</script>
+
+	<!-- generate a href for NEXT and PREV button -->
+	<script>
+
+		if ($("#next_link").attr("disabled")) {
+			$("#next_link").on("click", function() {
+			    return false; 
+			});
+		} else {
+			$("#next_link").removeAttr("disabled").off("click");
+		}
+
+		if ($("#prev_link").attr("disabled")) {
+			$("#prev_link").on("click", function() {
+			    return false; 
+			});
+		} else {
+			$("#prev_link").removeAttr("disabled").off("click");
+		}
+
+		function NextButtonClick(a) {
+			current_page = parseInt($('.pagination').find('.active').text());
+
+			var href_value = '';
+			if (current_page && current_page > 0) {
+				href_value = '/users_management?page=' + (current_page+1);
+			}
+			$(a).prop('href', href_value);
+		}
+
+		function PrevButtonClick(a) {
+			current_page = parseInt($('.pagination').find('.active').text());
+			href_value = '/users_management?page=' + (current_page-1);
+			$(a).prop('href', href_value);
+		}
+	</script>
+
+</div>
+
+{% end %}
