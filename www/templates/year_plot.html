@@ -276,7 +276,6 @@
 				}
 				var resp = data['response'];
 				var values = [];
-				console.log(resp);
 				for (var day = 1; day <= {{ days_count }};
 				     ++day) {
 					if (day in resp)
@@ -299,10 +298,10 @@
 				plot_parameter(control_data);
 			}
 		});
-	}
+	};
 	function points_compare(a, b) {
 		return a.x - b.x;
-	}
+	};
 	function plot_parameter(control_data) {
 		var boiler = boiler_params[control_data.boiler_id];
 		var param_id = control_data.param;
@@ -380,34 +379,37 @@
 		 * (x_min, x_max) and calculate ideal functions in
 		 * these points.
 		 */
-		var was_updates = false;
-		if (x_min != ideal_values[0].x) {
-			real_values.unshift({x: NaN,  y: NaN});
-			ideal_values.unshift({
-				x: x_min, y: param.ideal.get_y(x_min)
-			});
-			ideal_values_low.unshift({
-				x: x_min, y: param.ideal.get_low(x_min)
-			});
-			ideal_values_up.unshift({
-				x: x_min, y: param.ideal.get_up(x_min)
-			});
-			was_updated = true;
+		var was_updated = false;
+		if (ideal_values.length > 0) {
+			if (x_min != ideal_values[0].x) {
+				real_values.unshift({x: NaN,  y: NaN});
+				ideal_values.unshift({
+					x: x_min, y: param.ideal.get_y(x_min)
+				});
+				ideal_values_low.unshift({
+					x: x_min, y: param.ideal.get_low(x_min)
+				});
+				ideal_values_up.unshift({
+					x: x_min, y: param.ideal.get_up(x_min)
+				});
+				was_updated = true;
+			}
+			if (x_max != ideal_values[ideal_values.length - 1].x) {
+				real_values.push({x: NaN,  y: NaN});
+				ideal_values.push({
+					x: x_max, y: param.ideal.get_y(x_max)
+				});
+				ideal_values_low.push({
+					x: x_max, y: param.ideal.get_low(x_max)
+				});
+				ideal_values_up.push({
+					x: x_max, y: param.ideal.get_up(x_max)
+				});
+				was_updated = true;
+			}
 		}
-		if (x_max != ideal_values[ideal_values.length - 1].x) {
-			real_values.push({x: NaN,  y: NaN});
-			ideal_values.push({
-				x: x_max, y: param.ideal.get_y(x_max)
-			});
-			ideal_values_low.push({
-				x: x_max, y: param.ideal.get_low(x_max)
-			});
-			ideal_values_up.push({
-				x: x_max, y: param.ideal.get_up(x_max)
-			});
-			was_updated = true;
-		}
-		get_plot_object().update();
+		if (was_updated)
+			get_plot_object().update();
 	};
 
 	function read_params(control_data) {
