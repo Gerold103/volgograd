@@ -20,6 +20,9 @@ import tormysql
 from xml_parser import parse_xls
 from query import *
 import secret_conf
+import math
+
+import re
 
 pool = None
 
@@ -35,6 +38,19 @@ ERR_PARAMETERS = 'Неверные параметры'
 CAN_UPLOAD_REPORTS = 0x01
 CAN_SEE_REPORTS = 0x02
 CAN_DELETE_REPORTS = 0x04
+CAN_SEE_USERS = 0x08
+CAN_EDIT_USERS = 0x10
+
+permissions = {\
+		'can_upload_reports': (CAN_UPLOAD_REPORTS, 'Загрузка отчетов'),\
+		'can_see_reports': (CAN_SEE_REPORTS, 'Просмотр отчетов'),\
+		'can_delete_reports': (CAN_DELETE_REPORTS, 'Удаление отчетов'),\
+		'can_see_users': (CAN_SEE_USERS, 'Просмотр пользователей'),\
+		'can_edit_users': (CAN_EDIT_USERS, 'Добавление и редактирование пользователей')}
+
+NAME_PATTERN = '^[A-Za-zА-Яа-яЁё0-9]+(?:[ _-][A-Za-zА-Яа-яЁё0-9]+)*$'
+MAX_NAME_LENGTH = 65535
+NUMBER_USERS_IN_PAGE = 8
 
 month_names = ['Январь', 'Февраль', 'Март', 'Апрель', 'Май',
 	       'Июнь', 'Июль', 'Август', 'Сентябрь', 'Октябрь',
@@ -577,6 +593,143 @@ class MonthPlotHandler(BaseHandler):
 			return
 
 
+class UsersHandler(BaseHandler):
+	@tornado.web.authenticated
+	@tornado.gen.coroutine
+	def get(self):
+		if not self.check_rights(CAN_SEE_USERS):
+			return
+
+		user = self.get_current_user()
+		enable_edit = user['rights'] & CAN_EDIT_USERS
+
+		tx = yield pool.begin()
+		users = []
+		try:
+			users = yield get_all_users(tx, 'name, email, rights')
+		except Exception:
+			print("Error: get_all_users")
+		else:
+			yield tx.commit()
+
+		for i in range(len(users)):
+			users[i] = users[i] + ([],)
+			for key in permissions:
+				perm = int(users[i][2]) & permissions[key][0]
+				if perm  == permissions[key][0]:
+					users[i][3].append(permissions[key][1])
+
+		success_adding = bool(self.get_argument('success', False))
+		success_action_message = ''
+		if success_adding:
+			success_action_message = 'Пользователь успешно добавлен!'
+
+		num_of_pages = math.ceil(len(users)/NUMBER_USERS_IN_PAGE)
+		page = int(self.get_argument('page', num_of_pages if success_adding else 1))
+
+		self.render('users_management/management.html', \
+			enable_edit = enable_edit,
+			users = users,
+			success_action_message = success_action_message,
+			page = page,
+			num_in_page = NUMBER_USERS_IN_PAGE,
+			num_of_pages = num_of_pages)
+
+
+class UsersAddHandler(BaseHandler):
+	@tornado.web.authenticated
+	def get(self):
+		self.render('users_management/add_user.html', \
+			pers = permissions)
+
+	@tornado.gen.coroutine
+	def post(self):
+		user_data = {}
+		args_name = ['email', 'password', 'confirm_password', 'name']
+		keys_name = ['email', 'psw', 'cpsw', 'name']
+		errors_msg = ['Не указан email для добавляемого пользователя',\
+			'Не указан пароль для добавляемого пользователя',\
+			'Не указано подтверждение пароля для добавляемого пользователя',\
+			'Не указан имя для добавляемого пользователя']
+		for i in range(len(keys_name)):
+			key = keys_name[i]
+			user_data[key] = self.get_arguments(args_name[i], False)
+			if len(user_data[key]) == 0:
+				self.render_error(e_hdr=ERR_INSERT,
+						  e_msg=errors_msg[i])
+				return
+			else:
+				user_data[key] = user_data[key][0]
+		
+		if len(user_data['name']) > MAX_NAME_LENGTH or \
+			not re.match(NAME_PATTERN, user_data[key]):
+			self.render_error(e_hdr=ERR_INSERT,
+						  e_msg='Имя не удовлетворяет заданным ограничениям')
+			return
+
+		user_perm_int = 0
+		for key in permissions:
+			bvalue = (self.get_argument(key, None) == 'True')
+			if bvalue:
+				user_perm_int |= permissions[key][0]
+		user_data['rights'] = user_perm_int
+
+		if user_data['psw'] != user_data['cpsw']:
+			self.render_error(e_hdr=ERR_INSERT,
+						  e_msg='Пароли не совпадают')
+			return			
+
+		# 1) потестить еще с правами фигню (попробовать разные комбинации и 
+		# проверить, что все правильно там считается) +
+		# 2) сделать сообщение успешного добавления + допустим
+		# 3) проверка эл почты +
+		# 4) на сервере добавить проверки ограничения +
+		# 5) добавить в таблицу права чтоб смотреть их +
+		# 6) сделать, что таблица пользователей видна не для всех
+		#    и чтобы добавлять тоже не все могли +
+		# 7) пагинатор +
+		# 8) если удалили пользователя, то удалить куки и выйти
+
+		user_data.pop('cpsw', None)
+		psw = user_data['psw']
+		secret_conf.parse_config()
+		(salt, psw_hash) = secret_conf.generate_password_hash(psw)
+		user_data['psw'] = psw_hash
+		user_data['salt'] = salt
+
+		tx = yield pool.begin()
+		try:
+			duplicate_user = yield get_user_by_email(tx, 'id', user_data['email'])
+			if duplicate_user != None:
+				self.render_error(e_hdr=ERR_INSERT,\
+				e_msg='Пользователь с таким email уже существует')
+				return
+
+			yield insert_full_user(tx, user_data)
+		except Exception as e:
+			if tx:
+				yield tx.rollback()
+			self.render_error(e_hdr=ERR_INSERT,\
+				e_msg='Ошибка при добавлении пользователя в базу данных')
+			print(e)
+		else:
+			yield tx.commit()
+
+		self.redirect('/users_management?success=True')
+
+
+class UsersEditHandler(BaseHandler):
+	@tornado.web.authenticated
+	def get(self):
+		self.render('users_management/edit_user.html')
+
+
+class UsersDeleteHandler(BaseHandler):
+	@tornado.web.authenticated
+	def get(self):
+		self.redirect('/users_management?success=True')
+
+
 if __name__ == "__main__":
 	parser = argparse.ArgumentParser(description='VolComHoz')
 	parser.add_argument('--port', '-p', type=int, required=True,
@@ -602,7 +755,11 @@ if __name__ == "__main__":
 			(r'/login', LoginHandler),
 			(r'/logout', LogoutHandler),
 			(r'/drop_report', DropHandler),
-			(r'/month_plot', MonthPlotHandler)
+			(r'/month_plot', MonthPlotHandler),
+			(r'/users_management', UsersHandler),
+			(r'/users_management/add', UsersAddHandler),
+			(r'/users_management/edit', UsersEditHandler),
+			(r'/users_management/delete', UsersDeleteHandler)
 			],
 		autoreload=True,
 		template_path="templates/",

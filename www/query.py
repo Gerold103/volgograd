@@ -319,3 +319,37 @@ def insert_user(tx, email, pass_hash):
 	sql = "INSERT INTO users(email, pass_hash) VALUES (%s, %s)"
 	params = (email, pass_hash)
 	yield tx.execute(query=sql, params=params)
+
+##
+# Get all users.
+# @param tx    Current transaction.
+# @param cols  String with columns separated by commas: 'name, email, ...'.
+#
+# @retval 
+#
+@tornado.gen.coroutine
+def get_all_users(tx, cols):
+	sql = "SELECT {} FROM users".format(cols)
+	cursor = yield tx.execute(query=sql)
+
+	users = []
+	next_row = cursor.fetchone()
+	while next_row:
+		users.append((next_row[0], next_row[1], next_row[2]))
+		next_row = cursor.fetchone()
+
+	return users
+
+##
+# Insert a user to database
+#
+@tornado.gen.coroutine
+def insert_full_user(tx, src):
+	sql = "INSERT INTO users(email, password, salt, name, rights) "\
+		"VALUES (%s, %s, %s, %s, %s)"
+	params = (get_safe_val(src, 'email'),\
+			  get_safe_val(src, 'psw'),\
+			  get_safe_val(src, 'salt'),\
+			  get_safe_val(src, 'name'),\
+			  get_safe_val(src, 'rights'),)
+	yield tx.execute(query=sql, params=params)

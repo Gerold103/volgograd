@@ -124,3 +124,37 @@ h1 {
 .plot-control-form select {
 	min-width: 300px;
 }
+
+.table-hover > tbody > tr.bg-primary:hover > td,
+.bg-primary > td {
+    background-color: #428bca;
+}
+
+.row_details {
+	border-left: solid 1px lightgrey;
+	border-bottom: solid 1px lightgrey;
+	border-right: solid 1px lightgrey;
+	border-radius: 0px 0px 5px 5px;
+	margin: 0 0 5px 30px;
+	padding: 0px 10px;
+}
+
+.table-hover > tbody > tr.no-hover:hover,
+.table-hover > tbody > tr.no-hover:hover {
+    background-color: inherit;
+}
+
+.pagination a:hover {
+	cursor: pointer;
+}
+
+.table td.long_text {
+    max-width: 400px;
+}
+.table td.long_text span {
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    display: inline-block;
+    max-width: 100%;
+}
