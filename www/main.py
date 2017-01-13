@@ -34,6 +34,7 @@ ERR_LOGIN  = 'Ошибка входа'
 ERR_UPLOAD = 'Ошибка загрузки'
 ERR_404    = 'Не найдено'
 ERR_PARAMETERS = 'Неверные параметры'
+ERR_DELETE = 'Ошибка удаления'
 
 CAN_UPLOAD_REPORTS = 0x01
 CAN_SEE_REPORTS = 0x02
@@ -594,6 +595,16 @@ class MonthPlotHandler(BaseHandler):
 
 
 class UsersHandler(BaseHandler):
+	def get_success_action_message(self, suc_add, suc_del, suc_ed):
+		if suc_add:
+			return 'Пользователь успешно добавлен!'
+		elif suc_del:
+			return 'Пользователь успешно удален!'
+		elif suc_ed:
+			return 'Пользователь успешно отредактирован!'
+		else: 
+			return ''
+
 	@tornado.web.authenticated
 	@tornado.gen.coroutine
 	def get(self):
@@ -608,7 +619,11 @@ class UsersHandler(BaseHandler):
 		try:
 			users = yield get_all_users(tx, 'name, email, rights')
 		except Exception:
-			print("Error: get_all_users")
+			self.rollback_error(tx, e_hdr=ERR_500,
+					    e_msg='На сервере произошла '\
+						  'ошибка, обратитесь к '\
+						  'администратору')
+			return
 		else:
 			yield tx.commit()
 
@@ -619,10 +634,11 @@ class UsersHandler(BaseHandler):
 				if perm  == permissions[key][0]:
 					users[i][3].append(permissions[key][1])
 
-		success_adding = bool(self.get_argument('success', False))
-		success_action_message = ''
-		if success_adding:
-			success_action_message = 'Пользователь успешно добавлен!'
+		success_adding = bool(self.get_argument('suc_add', False))
+		success_delete = bool(self.get_argument('suc_del', False))
+		success_edit = bool(self.get_argument('suc_ed', False))
+		success_action_message = self.get_success_action_message(\
+			success_adding, success_delete, success_edit)
 
 		num_of_pages = math.ceil(len(users)/NUMBER_USERS_IN_PAGE)
 		page = int(self.get_argument('page', num_of_pages if success_adding else 1))
@@ -679,17 +695,6 @@ class UsersAddHandler(BaseHandler):
 						  e_msg='Пароли не совпадают')
 			return			
 
-		# 1) потестить еще с правами фигню (попробовать разные комбинации и 
-		# проверить, что все правильно там считается) +
-		# 2) сделать сообщение успешного добавления + допустим
-		# 3) проверка эл почты +
-		# 4) на сервере добавить проверки ограничения +
-		# 5) добавить в таблицу права чтоб смотреть их +
-		# 6) сделать, что таблица пользователей видна не для всех
-		#    и чтобы добавлять тоже не все могли +
-		# 7) пагинатор +
-		# 8) если удалили пользователя, то удалить куки и выйти
-
 		user_data.pop('cpsw', None)
 		psw = user_data['psw']
 		secret_conf.parse_config()
@@ -715,7 +720,7 @@ class UsersAddHandler(BaseHandler):
 		else:
 			yield tx.commit()
 
-		self.redirect('/users_management?success=True')
+		self.redirect('/users_management?suc_add=True')
 
 
 class UsersEditHandler(BaseHandler):
@@ -726,8 +731,39 @@ class UsersEditHandler(BaseHandler):
 
 class UsersDeleteHandler(BaseHandler):
 	@tornado.web.authenticated
+	@tornado.gen.coroutine
 	def get(self):
-		self.redirect('/users_management?success=True')
+		if not self.check_rights(CAN_EDIT_USERS):
+			return
+
+		email = self.get_argument('email', None)
+		if not email:
+			self.render_error(e_hdr=ERR_DELETE,
+					  e_msg='Не выбран пользователь')
+			return
+
+		tx = yield pool.begin()
+		try:
+			current_user = self.get_current_user()
+			current_email = yield get_user_by_id(tx, 'email',\
+				current_user['user_id'])
+			current_email = current_email[0]
+
+			if current_email == email:
+				self.rollback_error(tx, e_hdr=ERR_500,
+					    e_msg='Вы не можете удалить себя')
+				return
+
+			yield delete_user_by_email(tx, email)
+		except Exception:
+			self.rollback_error(tx, e_hdr=ERR_500,
+					    e_msg='На сервере произошла '\
+						  'ошибка, обратитесь к '\
+						  'администратору')
+			return
+		tx.commit()
+
+		self.redirect('/users_management?suc_del=True')
 
 
 if __name__ == "__main__":

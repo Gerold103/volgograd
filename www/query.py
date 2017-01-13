@@ -353,3 +353,23 @@ def insert_full_user(tx, src):
 			  get_safe_val(src, 'name'),\
 			  get_safe_val(src, 'rights'),)
 	yield tx.execute(query=sql, params=params)
+
+##
+# Delete a user by email
+#
+@tornado.gen.coroutine
+def delete_user_by_email(tx, email):
+	sql = "DELETE FROM users WHERE email = %s"
+	params = (email, )
+	cursor = yield tx.execute(query=sql, params=params)
+	return cursor.fetchone()
+
+##
+# Get a user by id
+#
+@tornado.gen.coroutine
+def get_user_by_id(tx, cols, id):
+	sql = "SELECT {} FROM users WHERE id = %s".format(cols)
+	params = (id, )
+	cursor = yield tx.execute(query=sql, params=params)
+	return cursor.fetchone()
