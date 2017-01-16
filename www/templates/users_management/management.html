@@ -6,7 +6,9 @@
 
 <div class="container-fluid">
 	<h2 class="col-md-12" style="margin:20px 0">Управление пользователями</h2>
-	<h5 class="col-md-12">{{ success_action_message }}</h5>
+	{% if success_action_message %}
+		<div class="col-md-12 alert alert-success" role="alert"><b>{{ success_action_message }}</b></div>
+	{% end %}
 	<div class="col-md-8">
 		<table class="table table-hover" id="users_table">
 			<thead>
@@ -75,30 +77,36 @@
 	{% if enable_edit %}
 		<div class="col-md-2">
 			<a href="/users_management/add" class="btn btn-default btn-lg btn-block btn-success">Добавить</a>
-			<a id="delete_user_button" href="" class="btn btn-default btn-lg btn-block btn-danger">Удалить</a>
-			<a href="/users_management/edit" class="btn btn-default btn-lg btn-block btn-warning">Редактировать</a>
+			<a id="delete_user_button" href="#" class="btn btn-default btn-lg btn-block btn-danger">Удалить</a>
+			<a id="edit_user_button" href="#" class="btn btn-default btn-lg btn-block btn-warning">Редактировать</a>
 		</div>
 	{% end %}
 
 	<!-- change a glyphicon when permissions are shown (hidden) -->
 	<script>
-		$('div.collapse').on('show.bs.collapse', function() {
+		$('div.collapse').on('show.bs.collapse', ChangeGlyphicon);
+		$('div.collapse').on('hide.bs.collapse', ChangeGlyphicon);
+
+		function ChangeGlyphicon() {
 			$(this).parent().parent().prev().find('.glyphicon').toggleClass('glyphicon-chevron-right').toggleClass('glyphicon-chevron-down');
-		});
-		$('div.collapse').on('hide.bs.collapse', function() {
-			$(this).parent().parent().prev().find('.glyphicon').toggleClass('glyphicon-chevron-right').toggleClass('glyphicon-chevron-down');
-		});
+		}
 	</script>
 
 	<!-- select the row of a table-->
 	<script>
 		$('#users_table').on('click', '.clickable-row', function(event) {
+			console.log("double click tested");
 			if($(this).hasClass('bg-primary')){
 				$(this).removeClass('bg-primary');
+				$('#delete_user_button').prop('href', '#');
+				$('#edit_user_button').prop('href', '#');
 			} else {
 				$(this).addClass('bg-primary').siblings().removeClass('bg-primary');
-				href_value = '/users_management/delete?email=' + $(this).children().eq(3).text();
-				$('#delete_user_button').prop('href', href_value);
+				email_value = $(this).children().eq(3).text();
+				href_value_delete = '/users_management/delete?email=' + email_value;
+				href_value_edit = '/users_management/edit?email=' + email_value;
+				$('#delete_user_button').prop('href', href_value_delete);
+				$('#edit_user_button').prop('href', href_value_edit);
 			}
 		});
 	</script>

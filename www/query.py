@@ -373,3 +373,20 @@ def get_user_by_id(tx, cols, id):
 	params = (id, )
 	cursor = yield tx.execute(query=sql, params=params)
 	return cursor.fetchone()
+
+##
+# Update a user
+#
+@tornado.gen.coroutine
+def update_user_by_email(tx, cols, vals, email):
+	sql = "UPDATE users SET "
+	first = True
+	for i, c in enumerate(cols):
+		if not first:
+			sql += ","
+		first = False
+		sql += (c + "='" + vals[i] + "'")
+		print(sql)
+	sql += " WHERE email = %s"
+	params = (email, )
+	yield tx.execute(query=sql, params=params)

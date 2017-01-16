@@ -35,6 +35,7 @@ ERR_UPLOAD = 'Ошибка загрузки'
 ERR_404    = 'Не найдено'
 ERR_PARAMETERS = 'Неверные параметры'
 ERR_DELETE = 'Ошибка удаления'
+ERR_EDIT = 'Ошибка редактирования'
 
 CAN_UPLOAD_REPORTS = 0x01
 CAN_SEE_REPORTS = 0x02
@@ -693,7 +694,7 @@ class UsersAddHandler(BaseHandler):
 		if user_data['psw'] != user_data['cpsw']:
 			self.render_error(e_hdr=ERR_INSERT,
 						  e_msg='Пароли не совпадают')
-			return			
+			return
 
 		user_data.pop('cpsw', None)
 		psw = user_data['psw']
@@ -705,7 +706,7 @@ class UsersAddHandler(BaseHandler):
 		tx = yield pool.begin()
 		try:
 			duplicate_user = yield get_user_by_email(tx, 'id', user_data['email'])
-			if duplicate_user != None:
+			if duplicate_user:
 				self.render_error(e_hdr=ERR_INSERT,\
 				e_msg='Пользователь с таким email уже существует')
 				return
@@ -716,7 +717,6 @@ class UsersAddHandler(BaseHandler):
 				yield tx.rollback()
 			self.render_error(e_hdr=ERR_INSERT,\
 				e_msg='Ошибка при добавлении пользователя в базу данных')
-			print(e)
 		else:
 			yield tx.commit()
 
@@ -725,8 +725,103 @@ class UsersAddHandler(BaseHandler):
 
 class UsersEditHandler(BaseHandler):
 	@tornado.web.authenticated
+	@tornado.gen.coroutine
 	def get(self):
-		self.render('users_management/edit_user.html')
+		if not self.check_rights(CAN_EDIT_USERS):
+			return
+
+		email = self.get_argument('email', None)
+		if not email:
+			self.render_error(e_hdr=ERR_EDIT,
+					  e_msg='Не выбран пользователь')
+			return
+
+		tx = yield pool.begin()
+		try:
+			user = yield get_user_by_email(tx, 'name, rights', email)
+		except Exception:
+			self.rollback_error(tx, e_hdr=ERR_500,
+					    e_msg='На сервере произошла '\
+						  'ошибка, обратитесь к '\
+						  'администратору')
+			return
+		tx.commit()
+
+		self.render('users_management/edit_user.html',
+			name = user[0],
+			email = email,
+			pers = user[1])
+
+	@tornado.gen.coroutine
+	def post(self):
+		cols_name = []
+		cols_value = []
+
+		email = self.get_argument('email', None)
+		if not email:
+			self.render_error(e_hdr=ERR_404,
+					  e_msg='Пользователя с таким email не существует')
+			return
+
+		tx = yield pool.begin()
+		try:
+			user = yield get_user_by_email(tx, 'id, password, '\
+			       'salt, rights, name',
+			       email)
+			if not user:
+				self.rollback_error(tx, e_hdr=ERR_404,
+						    e_msg='Пользователь с '\
+						    	  'таким email не '\
+						    	  'зарегистрирован')
+				return
+
+			name = self.get_argument('name', None)
+			if not name:
+				self.render_error(e_hdr=ERR_EDIT,
+							  	  e_msg='Не указано имя пользователя')
+				return
+
+			if user[4] != name:
+				cols_name.append('name')
+				cols_value.append(name)
+
+			psw = self.get_argument('old_password', None)
+			if psw:
+				true_psw = user[1]
+				salt = user[2]
+
+				if not secret_conf.check_password(psw, salt, true_psw):
+					self.render_error(e_hdr=ERR_EDIT,
+						    e_msg='Неправильный пароль')
+					return
+				new_psw = self.get_argument('password', None)
+				confirm_new_psw = self.get_argument('confirm_password', None)
+				if new_psw and confirm_new_psw:
+					if new_psw != confirm_new_psw:
+						self.render_error(e_hdr=ERR_EDIT,
+									  e_msg='Пароли не совпадают')
+						return
+
+					secret_conf.parse_config()
+					(salt, psw_hash) = secret_conf.\
+						generate_password_hash(new_psw)
+					cols_name.append('password')
+					cols_value.append(psw_hash)
+					cols_name.append('salt')
+					cols_value.append(salt)
+
+			if len(cols_name):
+				yield update_user_by_email(tx, cols_name, cols_value, email)
+		except Exception:
+			self.rollback_error(tx, e_hdr=ERR_500,
+					    e_msg='На сервере произошла '\
+						  'ошибка, обратитесь к '\
+						  'администратору')
+			return
+		tx.commit()
+
+			
+		self.redirect('/users_management?suc_ed=True')
 
 
 class UsersDeleteHandler(BaseHandler):
