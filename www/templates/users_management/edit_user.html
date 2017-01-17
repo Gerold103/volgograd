@@ -21,6 +21,28 @@
 			</div>
 		</div>
 
+		<!-- форма ПРАВ ДОСТУПА -->
+		<div class="form-group col-md-6" style="float: none;">
+			<table class="col-md-12" style="float: none">
+				<tr>
+				{% for index, key in enumerate(pers) %}
+					<td><div class="checkbox">
+						<label>
+							<input type="hidden" id="{{ key }}_hidden" name="{{ key }}" value="False">
+							<input type="checkbox" id="{{ key }}_showen" name="{{ key }}" value="True"
+							{% if pers_value[key] %} checked {% end %}>
+							{{ pers[key][1] }}
+						</label>
+					</div></td>
+					{% if index % 2%}
+			    		</tr>
+			    		<tr>
+				    {% end %}
+				{% end %}
+				</tr>
+			</table>
+		</div>
+
 		<!-- форма СТАРЫЙ ПАРОЛЬ -->
 		<div class="form-group col-md-6" style="float: none">
 			<label class="control-label" for="old_password_edit_user">

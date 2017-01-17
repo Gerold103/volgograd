@@ -348,7 +348,7 @@ def insert_full_user(tx, src):
 	sql = "INSERT INTO users(email, password, salt, name, rights) "\
 		"VALUES (%s, %s, %s, %s, %s)"
 	params = (get_safe_val(src, 'email'),\
-			  get_safe_val(src, 'psw'),\
+			  get_safe_val(src, 'password'),\
 			  get_safe_val(src, 'salt'),\
 			  get_safe_val(src, 'name'),\
 			  get_safe_val(src, 'rights'),)
@@ -378,15 +378,14 @@ def get_user_by_id(tx, cols, id):
 # Update a user
 #
 @tornado.gen.coroutine
-def update_user_by_email(tx, cols, vals, email):
+def update_user_by_email(tx, cols, email):
 	sql = "UPDATE users SET "
 	first = True
-	for i, c in enumerate(cols):
+	for c in cols:
 		if not first:
 			sql += ","
 		first = False
-		sql += (c + "='" + vals[i] + "'")
-		print(sql)
+		sql += (c + "='" + str(cols[c]) + "'")
 	sql += " WHERE email = %s"
 	params = (email, )
 	yield tx.execute(query=sql, params=params)

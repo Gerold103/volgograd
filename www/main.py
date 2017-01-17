@@ -595,7 +595,12 @@ class MonthPlotHandler(BaseHandler):
 			return
 
 
+##
+#	Users management (adding, editing, deleting a user)
+#
 class UsersHandler(BaseHandler):
+	
+	#	Message about success action (add, edit or delete)
 	def get_success_action_message(self, suc_add, suc_del, suc_ed):
 		if suc_add:
 			return 'Пользователь успешно добавлен!'
@@ -609,15 +614,21 @@ class UsersHandler(BaseHandler):
 	@tornado.web.authenticated
 	@tornado.gen.coroutine
 	def get(self):
+		# user doesn't have access rights to view a list of users
 		if not self.check_rights(CAN_SEE_USERS):
 			return
 
+		# enable_edit - true, if user has access to edit users
+		# enable_edit - false, if user doesn't have access to edit users
+		# enable_edit is used  in the file management.html to display 
+		# add/edit/delete buttons
 		user = self.get_current_user()
 		enable_edit = user['rights'] & CAN_EDIT_USERS
 
 		tx = yield pool.begin()
 		users = []
 		try:
+			# get a list of all users from db
 			users = yield get_all_users(tx, 'name, email, rights')
 		except Exception:
 			self.rollback_error(tx, e_hdr=ERR_500,
@@ -629,21 +640,41 @@ class UsersHandler(BaseHandler):
 			yield tx.commit()
 
 		for i in range(len(users)):
+			# users[i] = (name, email, rights)
+			# where rights is int
 			users[i] = users[i] + ([],)
+			# users[i] = (name, email, rights, perms)
+			# where perms is list of bool
+
+			# checking in the loop that a user has right PERMISSIONS[KEY]
 			for key in permissions:
 				perm = int(users[i][2]) & permissions[key][0]
+
+				# if user has PERMISSIONS[KEY]
 				if perm  == permissions[key][0]:
+					# then add to list of rights
 					users[i][3].append(permissions[key][1])
 
+		# get a variable if was success adding, editing or deleteing user
 		success_adding = bool(self.get_argument('suc_add', False))
 		success_delete = bool(self.get_argument('suc_del', False))
 		success_edit = bool(self.get_argument('suc_ed', False))
+		# get a text of message
 		success_action_message = self.get_success_action_message(\
 			success_adding, success_delete, success_edit)
 
+		# the number of pages
 		num_of_pages = math.ceil(len(users)/NUMBER_USERS_IN_PAGE)
+		# the currently displayed page
 		page = int(self.get_argument('page', num_of_pages if success_adding else 1))
 
+		# render page
+		# bool enable_edit - to display adding, editing, deleting buttons
+		# list<(name, email, int rights, list<bool> perms)> users - a list of all users
+		# string success_action_message - succes action message if needed
+		# int page - the currently displayed page
+		# int num_in_page - the number of users on a one page
+		# int num_of_pages - the number of pages
 		self.render('users_management/management.html', \
 			enable_edit = enable_edit,
 			users = users,
@@ -652,90 +683,115 @@ class UsersHandler(BaseHandler):
 			num_in_page = NUMBER_USERS_IN_PAGE,
 			num_of_pages = num_of_pages)
 
-
+##
+#	Adding a user
+#
 class UsersAddHandler(BaseHandler):
 	@tornado.web.authenticated
 	def get(self):
+		# render page, form of adding a user
 		self.render('users_management/add_user.html', \
 			pers = permissions)
 
 	@tornado.gen.coroutine
 	def post(self):
 		user_data = {}
-		args_name = ['email', 'password', 'confirm_password', 'name']
-		keys_name = ['email', 'psw', 'cpsw', 'name']
-		errors_msg = ['Не указан email для добавляемого пользователя',\
-			'Не указан пароль для добавляемого пользователя',\
-			'Не указано подтверждение пароля для добавляемого пользователя',\
-			'Не указан имя для добавляемого пользователя']
-		for i in range(len(keys_name)):
-			key = keys_name[i]
-			user_data[key] = self.get_arguments(args_name[i], False)
-			if len(user_data[key]) == 0:
+
+		# dict<name_of_field_in_the_form, error_message> - the responsing data
+		args_name = {'email': 'Не указан email для добавляемого пользователя',\
+			'password': 'Не указан пароль для добавляемого пользователя',\
+			'confirm_password': 'Не указано подтверждение пароля для добавляемого пользователя',\
+			'name': 'Не указано имя для добавляемого пользователя'}
+		# for each field
+		for key in args_name:
+			# get the responsing data by key
+			# the second argument - not trimming space in begin and end of string
+			user_data[key] = self.get_arguments(key, False)
+
+			# if the required field does not have a value
+			if not len(user_data[key]):
+				# then rendering an error page
 				self.render_error(e_hdr=ERR_INSERT,
-						  e_msg=errors_msg[i])
+						  e_msg=args_name[key])
 				return
-			else:
-				user_data[key] = user_data[key][0]
+			# else take first value (and the only)
+			user_data[key] = user_data[key][0]
 		
+		# validate name of user
 		if len(user_data['name']) > MAX_NAME_LENGTH or \
-			not re.match(NAME_PATTERN, user_data[key]):
+				not re.match(NAME_PATTERN, user_data['name']):
 			self.render_error(e_hdr=ERR_INSERT,
 						  e_msg='Имя не удовлетворяет заданным ограничениям')
 			return
 
+		# generate int rights by list of a True/False
 		user_perm_int = 0
 		for key in permissions:
+			# get right
 			bvalue = (self.get_argument(key, None) == 'True')
+			# if true
 			if bvalue:
+				# then add to user_perm_int
 				user_perm_int |= permissions[key][0]
+			# else skip
+
+		# set to user_data
 		user_data['rights'] = user_perm_int
 
-		if user_data['psw'] != user_data['cpsw']:
+		# validate that the passwords match
+		if user_data['password'] != user_data['confirm_password']:
 			self.render_error(e_hdr=ERR_INSERT,
 						  e_msg='Пароли не совпадают')
 			return
 
-		user_data.pop('cpsw', None)
-		psw = user_data['psw']
+		# confirm password is no longer needed
+		user_data.pop('confirm_password', None)
+		# generate hash password and salt by password
+		psw = user_data['password']
 		secret_conf.parse_config()
 		(salt, psw_hash) = secret_conf.generate_password_hash(psw)
-		user_data['psw'] = psw_hash
+		user_data['password'] = psw_hash
 		user_data['salt'] = salt
 
 		tx = yield pool.begin()
 		try:
+			# checking that the user with that email already exists in the db
 			duplicate_user = yield get_user_by_email(tx, 'id', user_data['email'])
 			if duplicate_user:
 				self.render_error(e_hdr=ERR_INSERT,\
 				e_msg='Пользователь с таким email уже существует')
 				return
 
+			# insert the user into db
 			yield insert_full_user(tx, user_data)
 		except Exception as e:
-			if tx:
-				yield tx.rollback()
-			self.render_error(e_hdr=ERR_INSERT,\
+			self.rollback_error(tx, e_hdr=ERR_INSERT,\
 				e_msg='Ошибка при добавлении пользователя в базу данных')
 		else:
 			yield tx.commit()
 
+		# redirect to users_management.html with the sucess adding flag
 		self.redirect('/users_management?suc_add=True')
 
-
+##
+#	Editing a user
+#
 class UsersEditHandler(BaseHandler):
 	@tornado.web.authenticated
 	@tornado.gen.coroutine
 	def get(self):
+		# user doesn't have access rights to edit a users
 		if not self.check_rights(CAN_EDIT_USERS):
 			return
 
+		# get the email of the person who editing
 		email = self.get_argument('email', None)
 		if not email:
 			self.render_error(e_hdr=ERR_EDIT,
 					  e_msg='Не выбран пользователь')
 			return
 
+		# get all user's field which are editing by email
 		tx = yield pool.begin()
 		try:
 			user = yield get_user_by_email(tx, 'name, rights', email)
@@ -747,16 +803,30 @@ class UsersEditHandler(BaseHandler):
 			return
 		tx.commit()
 
+		# get user rights
+		pers_value = {}
+		for index, key in enumerate(permissions):
+			pers_value[key] = bool(user[1] & permissions[key][0])
+
+		# render page, form of editing a user:
+		# string name - name of a user
+		# string email - email of a user
+		# dict pers - all rights
+		# list<bool> pers_value - current rights of a user
 		self.render('users_management/edit_user.html',
 			name = user[0],
 			email = email,
-			pers = user[1])
+			pers = permissions,
+			pers_value = pers_value)
 
 	@tornado.gen.coroutine
 	def post(self):
-		cols_name = []
-		cols_value = []
+		# dict with fields that have changed and will be updated
+		# key - name of field in db
+		# value - new value of field
+		updated_cols = {}
 
+		# get the email of the user who edited
 		email = self.get_argument('email', None)
 		if not email:
 			self.render_error(e_hdr=ERR_404,
@@ -765,6 +835,7 @@ class UsersEditHandler(BaseHandler):
 
 		tx = yield pool.begin()
 		try:
+			# get all user's data by email
 			user = yield get_user_by_email(tx, 'id, password, '\
 			       'salt, rights, name',
 			       email)
@@ -775,44 +846,88 @@ class UsersEditHandler(BaseHandler):
 						    	  'зарегистрирован')
 				return
 
+			# get changed name of user
 			name = self.get_argument('name', None)
 			if not name:
+				# user's name was changed to an empty string
 				self.render_error(e_hdr=ERR_EDIT,
 							  	  e_msg='Не указано имя пользователя')
 				return
 
+			# if user's name was changed
 			if user[4] != name:
-				cols_name.append('name')
-				cols_value.append(name)
+				# then update
+				updated_cols['name'] = name
 
+			# get a int rights by list<bool>
+			user_perm_int = 0
+			for key in permissions:
+				bvalue = (self.get_argument(key, None) == 'True')
+				if bvalue:
+					user_perm_int |= permissions[key][0]
+
+			# if user's rights was changed
+			if user[3] != user_perm_int:
+				# then update
+				updated_cols['rights'] = user_perm_int
+
+			# if user wants to change the password
 			psw = self.get_argument('old_password', None)
 			if psw:
+				# then check whether it is properly introduced 
+				# old (current) password
 				true_psw = user[1]
 				salt = user[2]
-
 				if not secret_conf.check_password(psw, salt, true_psw):
+					# no, it is not! password wrong, render error page
 					self.render_error(e_hdr=ERR_EDIT,
 						    e_msg='Неправильный пароль')
 					return
+				# yes, it is! password is correct
+
+				# validate that the password and confirm_password match
 				new_psw = self.get_argument('password', None)
 				confirm_new_psw = self.get_argument('confirm_password', None)
+				# if the user input new password and confirm_password
+				# but they are not matching
 				if new_psw and confirm_new_psw:
 					if new_psw != confirm_new_psw:
+						# then render error page
 						self.render_error(e_hdr=ERR_EDIT,
 									  e_msg='Пароли не совпадают')
 						return
+					# if they are matching
 
+					# generate new hash password and salt
 					secret_conf.parse_config()
 					(salt, psw_hash) = secret_conf.\
 						generate_password_hash(new_psw)
-					cols_name.append('password')
-					cols_value.append(psw_hash)
-					cols_name.append('salt')
-					cols_value.append(salt)
+					# and update
+					updated_cols['password'] = psw_hash
+					updated_cols['salt'] = salt
 
-			if len(cols_name):
-				yield update_user_by_email(tx, cols_name, cols_value, email)
+			# if the user changed something
+			if len(updated_cols):
+				# then update user data
+				yield update_user_by_email(tx, updated_cols, email)
+
+				# if the current user has changed himself
+				current_user = self.get_current_user()
+				current_email = yield get_user_by_id(tx, 'email',\
+					current_user['user_id'])
+				if (email == current_email[0]):
+					# update cookies for the current user
+					self.set_secure_cookie('user_id', str(user[0]),
+							       expires_days=1)
+					self.set_secure_cookie('rights', str(user_perm_int),
+							       expires_days=1)
+					if user[4]:
+						self.set_secure_cookie('user_name', name,
+								       expires_days=1)
+			# else nothing
+
 		except Exception:
+
 			self.rollback_error(tx, e_hdr=ERR_500,
 					    e_msg='На сервере произошла '\
 						  'ошибка, обратитесь к '\
@@ -820,17 +935,22 @@ class UsersEditHandler(BaseHandler):
 			return
 		tx.commit()
 
-			
+		# redirect to users_management.html with the sucess editing flag
 		self.redirect('/users_management?suc_ed=True')
 
 
+##
+#	Deleting a user
+#
 class UsersDeleteHandler(BaseHandler):
 	@tornado.web.authenticated
 	@tornado.gen.coroutine
 	def get(self):
+		# user doesn't have access rights to delete a users
 		if not self.check_rights(CAN_EDIT_USERS):
 			return
 
+		# get the email of the person who deleting
 		email = self.get_argument('email', None)
 		if not email:
 			self.render_error(e_hdr=ERR_DELETE,
@@ -839,16 +959,17 @@ class UsersDeleteHandler(BaseHandler):
 
 		tx = yield pool.begin()
 		try:
+			# forbidden to delete itself
 			current_user = self.get_current_user()
 			current_email = yield get_user_by_id(tx, 'email',\
 				current_user['user_id'])
 			current_email = current_email[0]
-
 			if current_email == email:
 				self.rollback_error(tx, e_hdr=ERR_500,
 					    e_msg='Вы не можете удалить себя')
 				return
 
+			# delete the user by email
 			yield delete_user_by_email(tx, email)
 		except Exception:
 			self.rollback_error(tx, e_hdr=ERR_500,
@@ -858,6 +979,7 @@ class UsersDeleteHandler(BaseHandler):
 			return
 		tx.commit()
 
+		# redirect to users_management.html with the sucess deleting flag
 		self.redirect('/users_management?suc_del=True')
 
 
