@@ -355,12 +355,12 @@ def insert_full_user(tx, src):
 	yield tx.execute(query=sql, params=params)
 
 ##
-# Delete a user by email
+# Delete a user by id
 #
 @tornado.gen.coroutine
-def delete_user_by_email(tx, email):
-	sql = "DELETE FROM users WHERE email = %s"
-	params = (email, )
+def delete_user_by_id(tx, id):
+	sql = "DELETE FROM users WHERE id = %s"
+	params = (id, )
 	cursor = yield tx.execute(query=sql, params=params)
 	return cursor.fetchone()
 
@@ -378,7 +378,7 @@ def get_user_by_id(tx, cols, id):
 # Update a user
 #
 @tornado.gen.coroutine
-def update_user_by_email(tx, cols, email):
+def update_user_by_id(tx, cols, id):
 	sql = "UPDATE users SET "
 	first = True
 	for c in cols:
@@ -386,6 +386,6 @@ def update_user_by_email(tx, cols, email):
 			sql += ","
 		first = False
 		sql += (c + "='" + str(cols[c]) + "'")
-	sql += " WHERE email = %s"
-	params = (email, )
+	sql += " WHERE id = %s"
+	params = (id, )
 	yield tx.execute(query=sql, params=params)

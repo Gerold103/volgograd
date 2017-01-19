@@ -595,11 +595,16 @@ class MonthPlotHandler(BaseHandler):
 			return
 
 
+class BaseUsers(BaseHandler):
+
+	current_user_id = None	
+
+
 ##
 #	Users management (adding, editing, deleting a user)
 #
-class UsersHandler(BaseHandler):
-	
+class UsersHandler(BaseUsers):
+
 	#	Message about success action (add, edit or delete)
 	def get_success_action_message(self, suc_add, suc_del, suc_ed):
 		if suc_add:
@@ -617,6 +622,27 @@ class UsersHandler(BaseHandler):
 		# user doesn't have access rights to view a list of users
 		if not self.check_rights(CAN_SEE_USERS):
 			return
+
+		# when the user selected in the table
+		# post request sends the email of the selected user
+		email = self.get_argument('email', None)
+		# if the user selected
+		if email and email != 'null':
+			# then set BaseUsers.current_user_id
+			tx = yield pool.begin()
+			try:
+				user_id = yield get_user_by_email(tx, 'id', email)
+				BaseUsers.current_user_id = int(user_id[0])
+			except Exception:
+				self.rollback_error(tx, e_hdr=ERR_500,
+						    e_msg='На сервере произошла '\
+							  'ошибка, обратитесь к '\
+							  'администратору')
+				return
+			else:
+				yield tx.commit()
+		else:
+			BaseUsers.current_user_id = None
 
 		# enable_edit - true, if user has access to edit users
 		# enable_edit - false, if user doesn't have access to edit users
@@ -686,7 +712,7 @@ class UsersHandler(BaseHandler):
 ##
 #	Adding a user
 #
-class UsersAddHandler(BaseHandler):
+class UsersAddHandler(BaseUsers):
 	@tornado.web.authenticated
 	def get(self):
 		# render page, form of adding a user
@@ -776,7 +802,7 @@ class UsersAddHandler(BaseHandler):
 ##
 #	Editing a user
 #
-class UsersEditHandler(BaseHandler):
+class UsersEditHandler(BaseUsers):
 	@tornado.web.authenticated
 	@tornado.gen.coroutine
 	def get(self):
@@ -784,17 +810,24 @@ class UsersEditHandler(BaseHandler):
 		if not self.check_rights(CAN_EDIT_USERS):
 			return
 
-		# get the email of the person who editing
-		email = self.get_argument('email', None)
-		if not email:
+		# get the id of the person who editing
+		user_id = BaseUsers.current_user_id
+		if not user_id:
 			self.render_error(e_hdr=ERR_EDIT,
 					  e_msg='Не выбран пользователь')
 			return
 
-		# get all user's field which are editing by email
+		# get all user's field which are editing by id
 		tx = yield pool.begin()
 		try:
-			user = yield get_user_by_email(tx, 'name, rights', email)
+			user = yield get_user_by_id(tx, 'email, name, rights', \
+				user_id)
+			if not user:
+				self.rollback_error(tx, e_hdr=ERR_404,
+						    e_msg='Пользователь с '\
+						    	  'таким id не '\
+						    	  'зарегистрирован')
+				return
 		except Exception:
 			self.rollback_error(tx, e_hdr=ERR_500,
 					    e_msg='На сервере произошла '\
@@ -806,7 +839,7 @@ class UsersEditHandler(BaseHandler):
 		# get user rights
 		pers_value = {}
 		for index, key in enumerate(permissions):
-			pers_value[key] = bool(user[1] & permissions[key][0])
+			pers_value[key] = bool(user[2] & permissions[key][0])
 
 		# render page, form of editing a user:
 		# string name - name of a user
@@ -814,35 +847,37 @@ class UsersEditHandler(BaseHandler):
 		# dict pers - all rights
 		# list<bool> pers_value - current rights of a user
 		self.render('users_management/edit_user.html',
-			name = user[0],
-			email = email,
+			email = user[0],
+			name = user[1],
 			pers = permissions,
 			pers_value = pers_value)
 
 	@tornado.gen.coroutine
 	def post(self):
+		#TODO: reduce this function
+
 		# dict with fields that have changed and will be updated
 		# key - name of field in db
 		# value - new value of field
 		updated_cols = {}
 
-		# get the email of the user who edited
-		email = self.get_argument('email', None)
-		if not email:
-			self.render_error(e_hdr=ERR_404,
-					  e_msg='Пользователя с таким email не существует')
+		# get the id of the person who editing
+		user_id = BaseUsers.current_user_id
+		if not user_id:
+			self.render_error(e_hdr=ERR_EDIT,
+					  e_msg='Не выбран пользователь')
 			return
 
 		tx = yield pool.begin()
 		try:
-			# get all user's data by email
-			user = yield get_user_by_email(tx, 'id, password, '\
+			# get all user's data by id
+			user = yield get_user_by_id(tx, 'email, password, '\
 			       'salt, rights, name',
-			       email)
+			       user_id)
 			if not user:
 				self.rollback_error(tx, e_hdr=ERR_404,
 						    e_msg='Пользователь с '\
-						    	  'таким email не '\
+						    	  'таким id не '\
 						    	  'зарегистрирован')
 				return
 
@@ -858,6 +893,26 @@ class UsersEditHandler(BaseHandler):
 			if user[4] != name:
 				# then update
 				updated_cols['name'] = name
+
+			# get changed email of user
+			email = self.get_argument('email', None)
+			if not email:
+				# user's email was changed to an empty string
+				self.render_error(e_hdr=ERR_EDIT,
+							  	  e_msg='Не указана почта пользователя')
+				return
+
+			# checking that the user with that email already exists in the db
+			duplicate_user = yield get_user_by_email(tx, 'id', email)
+			if duplicate_user and user_id != duplicate_user[0]:
+				self.render_error(e_hdr=ERR_INSERT,\
+				e_msg='Пользователь с таким email уже существует')
+				return
+
+			# if user's email was changed
+			if user[0] != email:
+				# then update
+				updated_cols['email'] = email
 
 			# get a int rights by list<bool>
 			user_perm_int = 0
@@ -909,15 +964,13 @@ class UsersEditHandler(BaseHandler):
 			# if the user changed something
 			if len(updated_cols):
 				# then update user data
-				yield update_user_by_email(tx, updated_cols, email)
+				yield update_user_by_id(tx, updated_cols, user_id)
 
 				# if the current user has changed himself
 				current_user = self.get_current_user()
-				current_email = yield get_user_by_id(tx, 'email',\
-					current_user['user_id'])
-				if (email == current_email[0]):
+				if (str(user_id) == current_user['user_id'].decode('utf-8')):
 					# update cookies for the current user
-					self.set_secure_cookie('user_id', str(user[0]),
+					self.set_secure_cookie('user_id', str(user_id),
 							       expires_days=1)
 					self.set_secure_cookie('rights', str(user_perm_int),
 							       expires_days=1)
@@ -927,7 +980,6 @@ class UsersEditHandler(BaseHandler):
 			# else nothing
 
 		except Exception:
-
 			self.rollback_error(tx, e_hdr=ERR_500,
 					    e_msg='На сервере произошла '\
 						  'ошибка, обратитесь к '\
@@ -942,7 +994,7 @@ class UsersEditHandler(BaseHandler):
 ##
 #	Deleting a user
 #
-class UsersDeleteHandler(BaseHandler):
+class UsersDeleteHandler(BaseUsers):
 	@tornado.web.authenticated
 	@tornado.gen.coroutine
 	def get(self):
@@ -950,9 +1002,9 @@ class UsersDeleteHandler(BaseHandler):
 		if not self.check_rights(CAN_EDIT_USERS):
 			return
 
-		# get the email of the person who deleting
-		email = self.get_argument('email', None)
-		if not email:
+		# get the id of the person who deleting
+		user_id = BaseUsers.current_user_id
+		if not user_id:
 			self.render_error(e_hdr=ERR_DELETE,
 					  e_msg='Не выбран пользователь')
 			return
@@ -961,16 +1013,13 @@ class UsersDeleteHandler(BaseHandler):
 		try:
 			# forbidden to delete itself
 			current_user = self.get_current_user()
-			current_email = yield get_user_by_id(tx, 'email',\
-				current_user['user_id'])
-			current_email = current_email[0]
-			if current_email == email:
+			if str(user_id) == current_user['user_id'].decode('utf-8'):
 				self.rollback_error(tx, e_hdr=ERR_500,
 					    e_msg='Вы не можете удалить себя')
 				return
 
-			# delete the user by email
-			yield delete_user_by_email(tx, email)
+			# delete the user by id
+			yield delete_user_by_id(tx, user_id)
 		except Exception:
 			self.rollback_error(tx, e_hdr=ERR_500,
 					    e_msg='На сервере произошла '\

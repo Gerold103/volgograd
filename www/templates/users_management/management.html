@@ -77,8 +77,8 @@
 	{% if enable_edit %}
 		<div class="col-md-2">
 			<a href="/users_management/add" class="btn btn-default btn-lg btn-block btn-success">Добавить</a>
-			<a id="delete_user_button" href="#" class="btn btn-default btn-lg btn-block btn-danger">Удалить</a>
-			<a id="edit_user_button" href="#" class="btn btn-default btn-lg btn-block btn-warning">Редактировать</a>
+			<a id="delete_user_button" href="/users_management/delete" class="btn btn-default btn-lg btn-block btn-danger">Удалить</a>
+			<a id="edit_user_button" href="/users_management/edit" class="btn btn-default btn-lg btn-block btn-warning">Редактировать</a>
 		</div>
 	{% end %}
 
@@ -95,20 +95,24 @@
 	<!-- select the row of a table-->
 	<script>
 		$('#users_table').on('click', '.clickable-row', function(event) {
-			console.log("double click tested");
 			if($(this).hasClass('bg-primary')){
 				$(this).removeClass('bg-primary');
-				$('#delete_user_button').prop('href', '#');
-				$('#edit_user_button').prop('href', '#');
+				CreateGetRequestEmail(null);
+
 			} else {
 				$(this).addClass('bg-primary').siblings().removeClass('bg-primary');
+				
 				email_value = $(this).children().eq(3).text();
-				href_value_delete = '/users_management/delete?email=' + email_value;
-				href_value_edit = '/users_management/edit?email=' + email_value;
-				$('#delete_user_button').prop('href', href_value_delete);
-				$('#edit_user_button').prop('href', href_value_edit);
+				CreateGetRequestEmail(email_value);
+
 			}
 		});
+
+		function CreateGetRequestEmail(email) {
+			var xhr = new XMLHttpRequest();
+			xhr.open('GET', '/users_management?email=' + email, true);
+			xhr.send();
+		}
 	</script>
 
 	<!-- generate a href for NEXT and PREV button -->
