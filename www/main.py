@@ -369,10 +369,13 @@ class ShowHandler(BaseHandler):
 		year = self.get_argument('year', libdate.today().year)
 		try:
 			year = int(year)
+			if year < 1970:
+				raise ValueError('Illegal year')
 		except Exception:
 			logger.exception("Year must be positive number")
 			self.render_error(e_hdr=ERR_PARAMETERS,
-					  e_msg='Год должен быть целым числом')
+					  e_msg='Год должен быть целым '\
+						'положительным числом от 1970')
 			return
 		if not date:
 			yield self.print_calendar(year)
@@ -644,6 +647,75 @@ class YearPlotHandler(BaseHandler):
 			return
 
 ##
+# Page with the table of deviations of the specified parameter
+# from its expected value.
+# On the page all boilers are showed.
+#
+class MonthOneParameterHandler(BaseHandler):
+	@tornado.gen.coroutine
+	@tornado.web.authenticated
+	def get(self):
+		if not self.check_rights(CAN_SEE_REPORTS):
+			return
+		#
+		# Need to specify both the year and the month.
+		#
+		year = self.get_argument('year', None)
+		if year is None:
+			self.render_error(e_hdr=ERR_404, e_msg='Не указан год')
+			return
+		month = self.get_argument('month', None)
+		if month is None:
+			self.render_error(e_hdr=ERR_404,
+					  e_msg='Не указан месяц')
+			return
+		try:
+			year = int(year)
+			month = int(month)
+			if year <= 0 or month <= 0:
+				raise ValueError('Illegal month or year')
+		except Exception:
+			logger.exception('Year and month must be positive '\
+					 'numbers')
+			self.render_error(e_hdr=ERR_PARAMETERS,
+					  e_msg='Год и месяц должны быть '\
+						'положительными числами')
+			return
+		tx = None
+		try:
+			tx = yield pool.begin()
+			#
+			# We don't need to render a first
+			# parameter, because it will be requested
+			# from a client side after loading via
+			# AJAX.
+			# To avoid strongly increasing page size
+			# and thus page loading speed, we avoid
+			# to render the page already with all
+			# parameters of all boilers. Instead of
+			# this way, the parameters are downloading
+			# by the client as requiered.
+			# So we need to pass only boiler and
+			# parameter identifiers.
+			#
+			districts = yield get_districts_with_boilers(tx)
+			start_week, month_range =\
+				calendar.monthrange(year, month)
+			self.render("month_one_parameter.html", year=year,
+				    days_count=month_range, districts=districts,
+				    month_names=month_names, month=month,
+				    get_date=get_str_date, get_val=get_html_val)
+			tx.commit()
+		except:
+			logger.exception('Error with getting districts and '\
+					 'boilers')
+			self.rollback_error(tx, e_hdr=ERR_500,
+					    e_msg='На сервере произошла '\
+						  'ошибка, обратитесь к '\
+						  'администратору')
+			return
+
+##
 # Get and return in the JSON format the parameter of the specified
 # boiler along the specified year.
 #
@@ -656,8 +728,7 @@ class GetYearParameterHandler(BaseHandler):
 	@tornado.web.authenticated
 	def get(self):
 		if not self.check_rights(CAN_SEE_REPORTS, render=False):
-			self.write(json.dumps({ 'error': 'У вас нет прав на '\
-							 'это действие' }))
+			self.render_json_error('У вас нет прав на это действие')
 			return
 		boiler_id = self.get_argument('boiler_id', None)
 		if boiler_id is None:
@@ -683,6 +754,45 @@ class GetYearParameterHandler(BaseHandler):
 			tx.commit()
 		except:
 			logger.exception('Error with getting parameter')
+			if tx:
+				tx.rollback()
+			self.render_json_error('На сервере произошла ошибка, '\
+					       'обратитесь к администратору')
+			return
+
+##
+# Get values of the specified parameter from all boilers along the
+# specified month.
+#
+class GetMonthParameterHandler(BaseHandler):
+	@tornado.gen.coroutine
+	@tornado.web.authenticated
+	def get(self):
+		if not self.check_rights(CAN_SEE_REPORTS, render=False):
+			self.render_json_error('У вас нет прав на это действие')
+			return
+		year = self.get_argument('year', None)
+		if year is None:
+			self.render_json_error('Не указан год')
+			return
+		month = self.get_argument('month', None)
+		if month is None:
+			self.render_json_error('Не указан месяц')
+			return
+		columns_bin = self.request.arguments.get('columns[]', None)
+		if columns_bin is None:
+			self.render_json_error('Не указаны колонки')
+			return
+		columns = [col.decode('utf-8') for col in columns_bin]
+		tx = None
+		try:
+			tx = yield pool.begin()
+			boilers = yield get_boilers_month_values(tx, year,
+								 month, columns)
+			self.render_json(boilers)
+			tx.commit()
+		except:
+			logger.exception('Error with getting month parameter')
 			if tx:
 				tx.rollback()
 			self.render_json_error('На сервере произошла ошибка, '\
@@ -716,7 +826,9 @@ if __name__ == "__main__":
 			(r'/drop_report', DropHandler),
 			(r'/month_plot', MonthPlotHandler),
 			(r'/year_plot', YearPlotHandler),
-			(r'/get_year_parameter', GetYearParameterHandler)
+			(r'/get_year_parameter', GetYearParameterHandler),
+			(r'/month_one_parameter', MonthOneParameterHandler),
+			(r'/get_month_parameter', GetMonthParameterHandler)
 			],
 		autoreload=True,
 		template_path="templates/",

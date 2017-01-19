@@ -1,5 +1,6 @@
 h1 {
 	font-size: 25px;
+	padding-left: 15px;
 }
 
 .report_title .date {
@@ -56,12 +57,24 @@ h1 {
 	background: #ffb0b0;
 }
 
+.text-danger {
+	color: #c45252;
+}
+
 .boiler_rooms_table td.warning {
 	background: #fffdc9;
 }
 
 .boiler_rooms_table td.warning:hover {
 	background: #fffcb7;
+}
+
+.text-warning {
+	color: #c4b852;
+}
+
+.text-success {
+	color: #5ed36e;
 }
 
 .main-menu .btn {
@@ -146,4 +159,12 @@ h1 {
 	display: inline-block;
 	width: 10px;
 	height: 10px;
+}
+
+.no-wrap {
+	white-space: nowrap;
+}
+
+.multiple-white-space {
+	white-space: pre;
 }

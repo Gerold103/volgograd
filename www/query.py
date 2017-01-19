@@ -24,6 +24,81 @@ boiler_room_report_cols = [
 ]
 
 ##
+# {
+# 	boiler_id: {
+# 		parameter: {
+# 			day1: val1,
+# 			day2: val2,
+# 			...
+# 		},
+# 		...
+# 	},
+# 	...
+# }
+#
+@tornado.gen.coroutine
+def get_boilers_month_values(tx, year, month, columns):
+	sql = 'SELECT boiler_room_id, DAY(date), {} FROM boiler_room_reports JOIN reports'\
+	      ' ON(report_id = reports.id) WHERE '\
+	      'YEAR(date) = %s AND MONTH(date) = %s'.format(",".join(columns))
+	params = (year, month)
+	cursor = yield tx.execute(query=sql, params=params)
+	boilers = {}
+	row = cursor.fetchone()
+	while row:
+		boiler_id = row[0]
+		day = row[1]
+		parameters = {}
+		if boiler_id in boilers:
+			parameters = boilers[boiler_id]
+		else:
+			boilers[boiler_id] = parameters
+		for i in range(2, len(columns) + 2):
+			val = row[i]
+			col = columns[i - 2]
+			values = {}
+			if col in parameters:
+				values = parameters[col]
+			else:
+				parameters[col] = values
+			values[day] = val
+		row = cursor.fetchone()
+	return boilers
+
+##
+# Returns the array with values:
+# { 'title': title_of_a_district, 'rooms':
+#   [
+#     {'id': boiler_id, 'name': boiler_name},
+#     ...
+#   ]
+# }
+#
+@tornado.gen.coroutine
+def get_districts_with_boilers(tx):
+	sql = "SELECT districts.name, boiler_rooms.id, boiler_rooms.name FROM "\
+	      "districts JOIN boiler_rooms "\
+	      "ON (districts.id = boiler_rooms.district_id)"
+	cursor = yield tx.execute(sql)
+	row = cursor.fetchone()
+	districts = {}
+	while row:
+		district = row[0]
+		id = row[1]
+		name = row[2]
+		boilers = []
+		if district in districts:
+			boilers = districts[district]
+		else:
+			districts[district] = boilers
+		boilers.append({ 'id': id, 'name': name })
+		row = cursor.fetchone()
+	result = []
+	for district, boilers in sorted(districts.items(), key=lambda x: x[0]):
+		result.append({ 'title': district, 'rooms': boilers })
+	return result
+
+##
 # Get a report for the specified date.
 # @param tx   Current transaction.
 # @param date Date on which need to find a report.

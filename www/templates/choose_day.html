@@ -5,6 +5,9 @@
 {% block body %}
 
 <div class="container-fluid" align="center">
+	<a class="btn btn-default btn-lg" href="/year_plot?year={{ year }}">
+		Годовой график температур
+	</a>
 	<ul class="pager">
 		<li class="previous">
 			<a href="/show_table?year={{ year - 1 }}">
@@ -26,7 +29,15 @@
 				<thead>
 					<tr>
 						<th colspan="7">
-						{{ month_names[month_num] }} <a href="/month_plot?year={{ year }}&month={{ month_num + 1 }}">Динамика параметров</a>
+							{{ month_names[month_num] }}
+							<span class="multiple-white-space">  |  </span>
+							<a href="/month_plot?year={{ year }}&month={{ month_num + 1 }}">
+								Динамика
+							</a>
+							<span class="multiple-white-space">  |  </span>
+							<a href="/month_one_parameter?year={{ year }}&month={{ month_num + 1 }}">
+								Отклонения
+							</a>
 						</th>
 					</tr>
 				</thead>
