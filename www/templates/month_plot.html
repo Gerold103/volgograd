@@ -105,48 +105,6 @@
 	{'title': 'Прозрачность', 'id': 'transparency'}
 ] %}
 
-<div class="container plot-control-form">
-	<div class="panel panel-default">
-		<div class="panel-heading">
-			Контрольная панель графика
-		</div>
-		<div class="panel-body form-inline form-group">
-			<div class="input-group">
-				<div class="input-group-addon">Минимум Oy</div>
-				<input type="text" id="plot-y-min" placeholder="по умолчанию" class="form-control">
-			</div>
-			<div class="input-group">
-				<div class="input-group-addon">Максимум Oy</div>
-				<input type="text" id="plot-y-max" placeholder="по умолчанию" class="form-control">
-			</div>
-			<div class="input-group">
-				<div class="input-group-addon">Параметр</div>
-				<select class="form-control" id="plot-param">
-					{% for item in table_struct %}
-						{% if 'childs' in item %}
-							{% for child in item['childs'] %}
-								<option value="{{ child['id'] }}">{{ child['name'] }}</option>
-							{% end %}
-						{% else %}
-							<option value="{{ item['id'] }}">{{ item['title'] }}</option>
-						{% end %}
-					{% end %}
-				</select>
-			</div>
-			<br><br>
-			<div class="input-group">
-				<div class="input-group-addon">Минимум Ox</div>
-				<input type="text" id="plot-x-min" placeholder="по умолчанию" class="form-control">
-			</div>
-			<div class="input-group">
-				<div class="input-group-addon">Максимум Ox</div>
-				<input type="text" id="plot-x-max" placeholder="по умолчанию" class="form-control">
-			</div>
-			<button class="btn btn-primary" onclick="update_plot();">Обновить график</button>
-		</div>
-	</div>
-</div>
-<canvas id="plot" style="max-height: 600px;"></canvas>
 <div class="container-fluid boiler_rooms_table month-plot-table" align="center">
 	<table class="table table-bordered table-striped table-hover">
 		<thead>
@@ -229,6 +187,49 @@
 		</tbody>
 	</table>
 </div>
+
+<div class="container plot-control-form">
+	<div class="panel panel-default">
+		<div class="panel-heading">
+			Контрольная панель графика
+		</div>
+		<div class="panel-body form-inline form-group">
+			<div class="input-group">
+				<div class="input-group-addon">Минимум Oy</div>
+				<input type="text" id="plot-y-min" placeholder="по умолчанию" class="form-control">
+			</div>
+			<div class="input-group">
+				<div class="input-group-addon">Максимум Oy</div>
+				<input type="text" id="plot-y-max" placeholder="по умолчанию" class="form-control">
+			</div>
+			<div class="input-group">
+				<div class="input-group-addon">Параметр</div>
+				<select class="form-control" id="plot-param">
+					{% for item in table_struct %}
+						{% if 'childs' in item %}
+							{% for child in item['childs'] %}
+								<option value="{{ child['id'] }}">{{ child['name'] }}</option>
+							{% end %}
+						{% else %}
+							<option value="{{ item['id'] }}">{{ item['title'] }}</option>
+						{% end %}
+					{% end %}
+				</select>
+			</div>
+			<br><br>
+			<div class="input-group">
+				<div class="input-group-addon">Минимум Ox</div>
+				<input type="text" id="plot-x-min" placeholder="по умолчанию" class="form-control">
+			</div>
+			<div class="input-group">
+				<div class="input-group-addon">Максимум Ox</div>
+				<input type="text" id="plot-x-max" placeholder="по умолчанию" class="form-control">
+			</div>
+			<button class="btn btn-primary" onclick="update_plot();">Обновить график</button>
+		</div>
+	</div>
+</div>
+<canvas id="plot" style="max-height: 600px;"></canvas>
 
 {% include "plot_builder.html" %}
 
