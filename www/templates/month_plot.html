@@ -10,99 +10,46 @@
 <h1>Режим работы тепловых сетей, Волгоград<br>{{ month_names[month - 1] }}, {{ year }}</h1>
 
 {% set table_struct = [
-	{'title': 'Расчетный<br>температурный<br>график', 'childs': [
-		{'title': 'T<sub>1</sub>', 'id': 'T1', 'name': 'Расчетный температурный график, T1'},
-		{'title': 'T<sub>2</sub>', 'id': 'T2', 'name': 'Расчетный температурный график, T2'}
-	]},
-	{'title': 'P газа', 'id': 'gas_pressure'},
-	{'title': 'Горелок в работе', 'id': 'torchs_in_use'},
-	{'title': 'Котлы', 'childs': [
-		{'title': 'Всего', 'id': 'boilers_all', 'name': 'Котлов всего'},
-		{'title': 'В работе', 'id': 'boilers_in_use', 'name': 'Котлы в работе'},
-		{'title': 'Резерв', 'id': 'boilers_reserve', 'name': 'Котлы резерв'},
-		{'title': 'Ремонт', 'id': 'boilers_in_repair', 'name': 'Котлы ремонт'}
-	]},
-	{'title': 'Сетевые<br>насосы', 'childs': [
-		{'title': 'В работе', 'id': 'net_pumps_in_work', 'name': 'Сетевые насосы в работе'},
-		{'title': 'Резерв', 'id': 'net_pumps_reserve', 'name': 'Сетевые насосы резерв'},
-		{'title': 'Ремонт', 'id': 'net_pumps_in_repair', 'name': 'Сетевые насосы ремонт'}
-	]},
-	{'title': 'Среднесуточная<br>температура', 'childs': [
-		{'title': 'Заданная T<sub>1</sub>', 'id': 'all_day_expected_temp1', 'name': 'Среднесуточная температура, заданная, T1'},
-		{'title': 'Заданная T<sub>2</sub>', 'id': 'all_day_expected_temp2', 'name': 'Среднесуточная температура, заданная, T2'},
-		{'title': 'Фактическая T<sub>1</sub>', 'id': 'all_day_real_temp1', 'name': 'Среднесуточная температура, фактическая, T1'},
-		{'title': 'Фактическая T<sub>2</sub>', 'id': 'all_day_real_temp2', 'name': 'Среднесуточная температура, фактическая, T2'},
-		{'title': 'T пр. откл. %',
-		 'id': 'day_average_temp_deviation1',
-		 'name': 'Среднесуточная температура, T пр. откл. %',
-		 'deviation_from': 'all_day_real_temp1',
-		 'deviation_to': 'all_day_expected_temp1',
-		 'border_low': -0.03,
-		 'border_up': 0.03,
-		 'plot_border_up': 3,
-		 'plot_border_low': -3,
-		},
-		{'title': 'T обр. откл. %',
-		 'id': 'day_average_temp_deviation2',
-		 'name': 'Среднесуточная температура, T обр. откл. %',
-		 'deviation_from': 'all_day_real_temp2',
-		 'deviation_to': 'all_day_expected_temp2',
-		 'border_low': -0.03,
-		 'border_up': 0.03,
-		 'plot_border_up': 3,
-		 'plot_border_low': -3,
-		}
-	]},
-	{'title': 'Температура<br>ночью', 'childs': [
-		{'title': 'Заданная T<sub>1</sub>', 'id': 'all_night_expected_temp1', 'name': 'Температура ночью, заданная, T1'},
-		{'title': 'Заданная T<sub>2</sub>', 'id': 'all_night_expected_temp2', 'name': 'Температура ночью, заданная, T2'},
-		{'title': 'Фактическая T<sub>1</sub>', 'id': 'all_night_real_temp1', 'name': 'Температура ночью, фактическая, T1'},
-		{'title': 'Фактическая T<sub>2</sub>', 'id': 'all_night_real_temp2', 'name': 'Температура ночью, фактическая, T2'},
-		{'title': 'T пр. откл. %',
-		 'id': 'night_average_temp_deviation1',
-		 'name': 'Температура ночью, T пр. откл. %',
-		 'deviation_from': 'all_night_real_temp1',
-		 'deviation_to': 'all_night_expected_temp1',
-		 'border_low': -0.03,
-		 'border_up': 0.03,
-		 'plot_border_up': 3,
-		 'plot_border_low': -3,
-		},
-		{'title': 'T обр. откл. %',
-		 'id': 'night_average_temp_deviation2',
-		 'name': 'Температура ночью, T обр. откл. %',
-		 'deviation_from': 'all_night_real_temp2',
-		 'deviation_to': 'all_night_expected_temp2',
-		 'border_low': -0.03,
-		 'border_up': 0.03,
-		 'plot_border_up': 3,
-		 'plot_border_low': -3,
-		}
-	]},
-	{'title': 'Давление<br>в сети', 'childs': [
-		{'title': 'P<sub>1</sub>', 'id': 'net_pressure1', 'name': 'Давление в сети, P1'},
-		{'title': 'P<sub>2</sub>', 'id': 'net_pressure2', 'name': 'Давление в сети, P2'}
-	]},
-	{'title': 'Расход воды<br>в час', 'childs': [
-		{'title': 'Расчетный', 'id': 'net_water_consum_expected_ph', 'name': 'Расход воды в час, расчетный'},
-		{'title': 'Фактический', 'id': 'net_water_consum_real_ph', 'name': 'Расход воды в час, фактический'}
-	]},
-	{'title': 'Расход<br>подпиточной<br>воды', 'childs': [
-		{'title': 'Расчетный', 'id': 'make_up_water_consum_expected_ph', 'name': 'Расход подпиточной воды, расчетный'},
-		{'title': 'Фактический<br>на 6:00', 'id': 'make_up_water_consum_real_ph', 'name': 'Расход подпиточной воды, фактический на 6:00'},
-		{'title': 'Фактический<br>за сутки', 'id': 'make_up_water_consum_real_pd', 'name': 'Расход подпиточной воды, фактический за сутки'},
-		{'title': 'Фактический<br>за месяц', 'id': 'make_up_water_consum_real_pm', 'name': 'Расход подпиточной воды, фактический за месяц'},
-		{'title': 'Отклонение %',
-		 'id': 'make_up_water_consum_deviation',
-		 'name': 'Расход подпиточной воды, отклонение %',
-		 'deviation_from': 'make_up_water_consum_real_ph',
-		 'deviation_to': 'make_up_water_consum_expected_ph',
-		 'border_up': 0,
-		 'plot_border_up': 0
-		}
-	]},
-	{'title': 'Жесткость', 'id': 'hardness'},
-	{'title': 'Прозрачность', 'id': 'transparency'}
+	{
+		'title': 'Расход воды<br>в час',
+		'childs': [
+			{
+				'title': 'Расчетный',
+				'id': 'net_water_consum_expected_ph',
+				'name': 'Расход воды в час, расчетный'
+			},
+			{
+				'title': 'Фактический',
+				'id': 'net_water_consum_real_ph',
+				'name': 'Расход воды в час, фактический'
+			}
+		]
+	},
+	{
+		'title': 'Расход<br>подпиточной<br>воды',
+		'childs': [
+			{
+				'title': 'Расчетный',
+				'id': 'make_up_water_consum_expected_ph',
+				'name': 'Расход подпиточной воды, расчетный'
+			},
+			{
+				'title': 'Фактический<br>на 6:00',
+				'id': 'make_up_water_consum_real_ph',
+				'name': 'Расход подпиточной воды, фактический на 6:00'
+			},
+			{
+				'title': 'Фактический<br>за сутки',
+				'id': 'make_up_water_consum_real_pd',
+				'name': 'Расход подпиточной воды, фактический за сутки'
+			},
+			{
+				'title': 'Фактический<br>за месяц',
+				'id': 'make_up_water_consum_real_pm',
+				'name': 'Расход подпиточной воды, фактический за месяц'
+			},
+		]
+	},
 ] %}
 
 <div class="container-fluid boiler_rooms_table month-plot-table" align="center">
@@ -123,14 +70,7 @@
 			{% for item in table_struct %}
 				{% if 'childs' in item %}
 					{% set first = item['childs'][0] %}
-					<tr align="center" id="{{ first['id'] }}" name="{{ first['name'] }}" data-offset="2"
-						{% if 'plot_border_up' in first %}
-							data-plot-border-up="{{ first['plot_border_up'] }}"
-						{% end %}
-						{% if 'plot_border_low' in first %}
-							data-plot-border-low="{{ first['plot_border_low'] }}"
-						{% end %}
-					>
+					<tr align="center" id="{{ first['id'] }}" name="{{ first['name'] }}" data-offset="2">
 						<td rowspan="{{ len(item['childs']) }}">
 							{{ item['title'] }}
 						</td>
@@ -138,41 +78,14 @@
 					{% for i in range(childs_count) %}
 						{% set child = item['childs'][i] %}
 						<td>{{ child['title'] }}</td>
-
-						{% if 'deviation_from' in child %}
-							{% for day in range(1, month_range + 1) %}
-								{% set expected_val = get_val(get_val(statistics, day), child['deviation_to']) %}
-								{% set real_val = get_val(get_val(statistics, day), child['deviation_from']) %}
-								{% if expected_val == '-' or real_val == '-' %}
-									<td>-</td>
-								{% else %}
-									{% set diff = (real_val - expected_val) / expected_val %}
-									{% set percent_str = '{:.2f}%'.format(diff * 100.0) %}
-									{% if 'border_up' in child and diff > child['border_up'] %}
-										<td class="danger">{{ percent_str }}</td>
-									{% elif 'border_low' in child and diff < child['border_low'] %}
-										<td class="warning">{{ percent_str }}</td>
-									{% else %}
-										<td>{{ percent_str }}</td>
-									{% end %}
-								{% end %}
-							{% end %}
-						{% else %}
 							{% for day in range(1, month_range + 1) %}
 								<td>{{ get_float(get_val(statistics, day), child['id']) }}</td>
 							{% end %}
-						{% end %}
+
 						</tr>
 						{% if i + 1 < childs_count %}
 							{% set next = item['childs'][i + 1] %}
-							<tr align="center" id="{{ next['id'] }}" name="{{ next['name'] }}" data-offset="1"
-								{% if 'plot_border_up' in next %}
-									data-plot-border-up="{{ next['plot_border_up'] }}"
-								{% end %}
-								{% if 'plot_border_low' in next %}
-									data-plot-border-low="{{ next['plot_border_low'] }}"
-								{% end %}
-							>
+							<tr align="center" id="{{ next['id'] }}" name="{{ next['name'] }}" data-offset="1">
 						{% end %}
 					{% end %}
 				{% else %}
@@ -239,14 +152,6 @@
 		var title = $tr.attr("name");
 		var offset = $tr.attr("data-offset");
 		var table_values = $tr.children().slice(offset);
-		var plot_border_up = NaN;
-		var plot_border_low = NaN;
-		if ($tr[0].hasAttribute('data-plot-border-up')) {
-			plot_border_up = $tr.attr('data-plot-border-up');
-		}
-		if ($tr[0].hasAttribute('data-plot-border-low')) {
-			plot_border_low = $tr.attr('data-plot-border-low');
-		}
 		var values = [];
 		var labels = [];
 		var day = 0;
@@ -285,20 +190,6 @@
 		plot_add_data({ label: 'Значения', color: 'rgb(75, 192, 192)',
 			        data: values });
 
-		if (!isNaN(plot_border_up)) {
-			var up_data = []
-			for (var i = 0; i < values.length; ++i)
-				up_data.push(plot_border_up);
-			plot_add_data({ label: 'Верхняя граница',
-					color: '#ffbbbb', data: up_data });
-		}
-		if (!isNaN(plot_border_low)) {
-			var low_data = [];
-			for (var i = 0; i < values.length; ++i)
-				low_data.push(plot_border_low);
-			plot_add_data({ label: 'Нижняя граница',
-					color: '#e4dd28', data: low_data });
-		}
 		plot_set_title(title);
 		plot_object_set(new Chart(get_plot_DOM(),
 				{ type: 'line', data: plot_data,
@@ -314,7 +205,7 @@
 	plot_set_param_reader(read_param);
 
 	window.onload = function() {
-		plot_parameter({ param: "all_day_expected_temp1" });
+		update_plot();
 	};
 	$("tbody tr").click(function(e) {
 		plot_parameter({ param: e.currentTarget.id });

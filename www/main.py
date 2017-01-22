@@ -573,10 +573,17 @@ class MonthPlotHandler(BaseHandler):
 				calendar.monthrange(year, month)
 			tx = yield pool.begin()
 			statistics = None
+			cols = ['net_water_consum_expected_ph',
+				'net_water_consum_real_ph',
+				'make_up_water_consum_expected_ph',
+				'make_up_water_consum_real_ph',
+				'make_up_water_consum_real_pd',
+				'make_up_water_consum_real_pm']
 			try:
-				statistics = yield get_avg_reports_by_month(tx,
+				statistics = yield get_sum_reports_by_month(tx,
 									   year,
-									  month)
+									  month,
+									  cols=cols)
 			except Exception:
 				logger.exception('Error with getting average '\
 						 'values for month reports')

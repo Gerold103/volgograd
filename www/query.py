@@ -422,9 +422,8 @@ def get_full_report_by_date(tx, date):
 # in all boiler rooms.
 #
 @tornado.gen.coroutine
-def get_avg_reports_by_month(tx, year, month):
-	get_avg = lambda x: 'AVG({})'.format(x)
-	avg_list = list(map(get_avg, boiler_room_report_cols))
+def get_sum_reports_by_month(tx, year, month, cols):
+	avg_list = list(['SUM({})'.format(col) for col in cols])
 	sql = 'SELECT DAY(date), {} FROM reports JOIN boiler_room_reports '\
 	      'ON(reports.id = report_id) WHERE MONTH(date) = %s and '\
 	      'YEAR(date) = %s GROUP BY date;'.format(",".join(avg_list))
@@ -437,7 +436,7 @@ def get_avg_reports_by_month(tx, year, month):
 		params = {}
 		day = row[0]
 		i = 1
-		for col in boiler_room_report_cols:
+		for col in cols:
 			params[col] = row[i]
 			i += 1
 		res[day] = params
