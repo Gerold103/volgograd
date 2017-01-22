@@ -195,8 +195,9 @@ class UploadHandler(BaseHandler):
 					  e_msg='Не указан файл')
 			return
 		fileinfo = self.request.files['xls-table'][0]
-		tx = yield pool.begin()
+		tx = None
 		try:
+			tx = yield pool.begin()
 			#
 			# We emulate a file by BytesIO usage.
 			#
@@ -271,8 +272,9 @@ class ShowHandler(BaseHandler):
 		#
 		# Find what reports were uploaded.
 		#
-		tx = yield pool.begin()
+		tx = None
 		try:
+			tx = yield pool.begin()
 			uploaded_days_raw = yield get_report_dates_by_year(tx,
 									   year)
 		except Exception:
@@ -380,8 +382,9 @@ class ShowHandler(BaseHandler):
 		if not date:
 			yield self.print_calendar(year)
 			return
-		tx = yield pool.begin()
+		tx = None
 		try:
+			tx = yield pool.begin()
 			report = yield get_full_report_by_date(tx, date)
 			if not report:
 				self.rollback_error(tx,
@@ -442,8 +445,9 @@ class LoginHandler(BaseHandler):
 			self.render_error(e_hdr=ERR_LOGIN,
 					  e_msg='Не указан пароль')
 			return
-		tx = yield pool.begin()
+		tx = None
 		try:
+			tx = yield pool.begin()
 			#
 			# Try to find the user by specified email.
 			#
@@ -515,8 +519,9 @@ class DropHandler(BaseHandler):
 			self.render_error(e_hdr=ERR_404,
 					  e_msg='Не указана дата отчета')
 			return
-		tx = yield pool.begin()
+		tx = None
 		try:
+			tx = yield pool.begin()
 			yield delete_report_by_date(tx, date)
 		except Exception:
 			logger.exception("Error with deleting report by date")
