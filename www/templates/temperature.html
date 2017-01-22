@@ -1,6 +1,6 @@
 {% extends "base.html" %}
 
-{% block title %}ВолКомХоз: график{% end %}
+{% block title %}Температура за месяц{% end %}
 
 {% block body %}
 
@@ -84,7 +84,7 @@
 	{% end %}
 </script>
 
-<h1>Режим работы тепловых сетей, Волгоград<br>{{ month_names[month - 1] }}, {{ year }}</h1>
+<h1>Температура<br>{{ month_names[month - 1] }}, {{ year }}</h1>
 
 <div style="padding-left: 15px;" class="form-inline form-group">
 	<label for="table-param">Параметр</label>

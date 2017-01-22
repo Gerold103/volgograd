@@ -1,13 +1,13 @@
 {% extends "base.html" %}
 
-{% block title %}ВолКомХоз: график{% end %}
+{% block title %}Расход воды за месяц{% end %}
 
 {% block links %}
 <script type="text/javascript" src="{{ static_url('js/Chart.bundle.js') }}"></script>
 {% end %}
 
 {% block body %}
-<h1>Режим работы тепловых сетей, Волгоград<br>{{ month_names[month - 1] }}, {{ year }}</h1>
+<h1>Расход воды<br>{{ month_names[month - 1] }}, {{ year }}</h1>
 
 {% set table_struct = [
 	{

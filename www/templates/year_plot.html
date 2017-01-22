@@ -1,13 +1,13 @@
 {% extends "base.html" %}
 
-{% block title %}ВолКомХоз: график{% end %}
+{% block title %}Температура за год{% end %}
 
 {% block links %}
 <script type="text/javascript" src="{{ static_url('js/Chart.bundle.js') }}"></script>
 {% end %}
 
 {% block body %}
-<h1>Режим работы тепловых сетей, Волгоград, {{ year }}</h1>
+<h1>Температура за год {{ year }}</h1>
 
 <script type="text/javascript">
 	function ideal_temperature1(x) {

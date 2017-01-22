@@ -109,7 +109,7 @@ def get_districts_with_boilers(tx):
 @tornado.gen.coroutine
 def get_report_by_date(tx, date, cols):
 	sql = "SELECT {} FROM reports WHERE date = "\
-	      "STR_TO_DATE(%s, %s)".format(cols)
+	      "STR_TO_DATE(%s, %s)".format(','.format(cols))
 	params = (date, '%d.%m.%Y')
 	cursor = yield tx.execute(query=sql, params=params)
 	return cursor.fetchone()
@@ -215,7 +215,7 @@ def delete_report_by_date(tx, date):
 #
 @tornado.gen.coroutine
 def get_district_by_name(tx, name, cols):
-	sql = "SELECT {} FROM districts WHERE name = %s".format(cols)
+	sql = "SELECT {} FROM districts WHERE name = %s".format(','.join(cols))
 	params = (name, )
 	cursor = yield tx.execute(query=sql, params=params)
 	return cursor.fetchone()
@@ -242,7 +242,7 @@ def insert_district(tx, name):
 @tornado.gen.coroutine
 def get_boiler_room_by_dist_and_name(tx, cols, dist_id, name):
 	sql = "SELECT {} FROM boiler_rooms WHERE district_id = %s AND "\
-	      "name = %s".format(cols)
+	      "name = %s".format(','.join(cols))
 	params = (dist_id, name)
 	cursor = yield tx.execute(query=sql, params=params)
 	return cursor.fetchone()
@@ -303,14 +303,14 @@ def get_html_float_to_str(src, name, precision=2):
 #
 @tornado.gen.coroutine
 def insert_boiler_room_report(tx, src, room_id, report_id):
-	sql = 'INSERT INTO boiler_room_reports '\
-	      'VALUES (NULL, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, '\
-		       '%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, '\
-		       '%s, %s, %s, %s, %s, %s)'
 	assert(room_id)
 	assert(report_id)
-	global boiler_room_report_cols
 	params = [room_id, report_id]
+	values = ['%s', '%s']
+	for i in range(len(boiler_room_report_cols)):
+		values.append('%s')
+	values = ','.join(values)
+	sql = 'INSERT INTO boiler_room_reports VALUES (NULL, {})'.format(values)
 	for col in boiler_room_report_cols:
 		params.append(get_safe_val(src, col))
 	yield tx.execute(query=sql, params=params)
