@@ -451,9 +451,9 @@ class LoginHandler(BaseHandler):
 			#
 			# Try to find the user by specified email.
 			#
-			user = yield get_user_by_email(tx, 'id, password, '\
-						       'salt, rights, name',
-						       email)
+			columns = [ 'id', 'password', 'salt', 'rights', 'name',
+				    'email' ]
+			user = yield get_user_by_email(tx, columns)
 			if not user:
 				self.rollback_error(tx, e_hdr=ERR_404,
 						    e_msg='Пользователь с '\
@@ -777,6 +777,15 @@ class GetYearParameterHandler(BaseHandler):
 # specified month.
 #
 class GetMonthParameterHandler(BaseHandler):
+	available_columns = [ 'all_day_real_temp1', 'all_day_expected_temp1',
+			      'all_day_real_temp2', 'all_day_expected_temp2',
+			      'all_night_real_temp1',
+			      'all_night_expected_temp1',
+			      'all_night_real_temp2',
+			      'all_night_expected_temp2',
+			      'make_up_water_consum_real_ph',
+			      'make_up_water_consum_expected_ph']
+
 	@tornado.gen.coroutine
 	@tornado.web.authenticated
 	def get(self):
@@ -795,7 +804,21 @@ class GetMonthParameterHandler(BaseHandler):
 		if columns_bin is None:
 			self.render_json_error('Не указаны колонки')
 			return
-		columns = [col.decode('utf-8') for col in columns_bin]
+		columns = []
+		for col in columns_bin:
+			#
+			# Need to decode, because it is handler for AJAX
+			# that sends binary values.
+			#
+			col = col.decode('utf-8')
+			#
+			# Protect from SQL injection
+			#
+			if col not in GetMonthParameterHandler.available_columns:
+				self.render_json_error('Нельзя получать '\
+						       'столбец {}'.format(col))
+				return
+			columns.append(col)
 		tx = None
 		try:
 			tx = yield pool.begin()
