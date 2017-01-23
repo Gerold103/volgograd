@@ -452,7 +452,7 @@ def get_sum_reports_by_month(tx, year, month, cols):
 #
 @tornado.gen.coroutine
 def get_user_by_email(tx, cols, email):
-	sql = "SELECT {} FROM users WHERE email = %s".format(cols)
+	sql = "SELECT {} FROM users WHERE email = %s".format(','.join(cols))
 	params = (email, )
 	cursor = yield tx.execute(query=sql, params=params)
 	return cursor.fetchone()

@@ -66,7 +66,7 @@ class LoginHandler(BaseHandler):
 			#
 			columns = [ 'id', 'password', 'salt', 'rights', 'name',
 				    'email' ]
-			user = yield get_user_by_email(tx, columns)
+			user = yield get_user_by_email(tx, columns, email)
 			if not user:
 				self.rollback_error(tx, e_hdr=ERR_404,
 						    e_msg='Пользователь с '\
