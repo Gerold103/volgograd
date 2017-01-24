@@ -6,6 +6,8 @@ import json
 import tornado
 import tornado.web
 
+from constants import *
+
 ##
 # Base class for users authentication and error pages rendering.
 #
