@@ -9,7 +9,7 @@ import tornado
 import tornado.web
 import tornado.gen
 
-import db
+import application
 from xml_parser import parse_xls
 from base_handler import BaseHandler
 from query import *
@@ -93,7 +93,7 @@ class UploadHandler(BaseHandler):
 		fileinfo = self.request.files['xls-table'][0]
 		tx = None
 		try:
-			tx = yield db.begin()
+			tx = yield application.begin()
 			#
 			# We emulate a file by BytesIO usage.
 			#

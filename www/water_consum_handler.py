@@ -7,7 +7,7 @@ import tornado
 import tornado.web
 import tornado.gen
 
-import db
+import application
 from query import *
 from constants import *
 from base_handler import BaseHandler
@@ -50,7 +50,7 @@ class WaterConsumHandler(BaseHandler):
 		try:
 			start_week, month_range =\
 				calendar.monthrange(year, month)
-			tx = yield db.begin()
+			tx = yield application.begin()
 			statistics = None
 			cols = ['net_water_consum_expected_ph',
 				'net_water_consum_real_ph',

@@ -7,7 +7,7 @@ import tornado
 import tornado.web
 import tornado.gen
 
-import db
+import application
 from query import *
 from constants import *
 from base_handler import BaseHandler
@@ -39,7 +39,7 @@ class YearPlotHandler(BaseHandler):
 		days = calendar.isleap(year) and 366 or 365
 		tx = None
 		try:
-			tx = yield db.begin()
+			tx = yield application.begin()
 			ids = yield get_boiler_room_ids_and_titles(tx)
 			column = ['all_day_expected_temp1', ]
 			first_id = ids[0]['id']

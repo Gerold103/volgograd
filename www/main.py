@@ -1,8 +1,10 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 
+import sys
 import argparse
 import logging
+import unittest
 
 import tornado
 import tornado.ioloop
@@ -10,7 +12,7 @@ import tornado.web
 import tornado.gen
 
 import secret_conf
-import db
+import application
 from base_handler         import BaseHandler
 from upload_handler       import UploadHandler
 from show_handler         import ShowHandler
@@ -19,6 +21,9 @@ from year_plot_handler    import YearPlotHandler
 from temperature_handler  import TemperatureHandler
 from query import *
 from constants import *
+
+from tests_prepare_suite     import AAA_TestSuitePrepare
+from test_login_logout_suite import TestSuiteLoginLogout
 
 ##
 # Main page render.
@@ -60,7 +65,7 @@ class LoginHandler(BaseHandler):
 			return
 		tx = None
 		try:
-			tx = yield db.begin()
+			tx = yield application.begin()
 			#
 			# Try to find the user by specified email.
 			#
@@ -92,7 +97,6 @@ class LoginHandler(BaseHandler):
 			self.set_secure_cookie('user_id', str(user_id),
 					       expires_days=1)
 			#
-			# TODO: dont store rights on a client side.
 			# Rights specifies which actions the user can execute.
 			#
 			self.set_secure_cookie('rights', str(rights),
@@ -100,16 +104,14 @@ class LoginHandler(BaseHandler):
 			if user_name:
 				self.set_secure_cookie('user_name', user_name,
 						       expires_days=1)
+			yield tx.commit()
 		except Exception as e:
 			self.rollback_error(tx, e_hdr=ERR_500,
 					    e_msg='На сервере произошла '\
 					    	  'ошибка, обратитесь к '\
 					    	  'администратору')
 			return
-		else:
-			yield tx.commit()
-			self.redirect('/')
-
+		self.redirect('/')
 ##
 # Logout current user and delete all its cookies.
 #
@@ -134,8 +136,9 @@ class DropHandler(BaseHandler):
 			return
 		tx = None
 		try:
-			tx = yield db.begin()
+			tx = yield application.begin()
 			yield delete_report_by_date(tx, date)
+			tx.commit()
 		except Exception:
 			logger.exception("Error with deleting report by date")
 			self.rollback_error(tx, e_hdr=ERR_500,
@@ -143,7 +146,6 @@ class DropHandler(BaseHandler):
 						  'ошибка, обратитесь к '\
 						  'администратору')
 			return
-		tx.commit()
 		self.redirect('/')
 
 ##
@@ -177,7 +179,7 @@ class GetYearParameterHandler(BaseHandler):
 			return
 		tx = None
 		try:
-			tx = yield db.begin()
+			tx = yield application.begin()
 			report = yield get_boiler_year_report(tx, boiler_id,
 							      year,
 							      [param_name, ])
@@ -240,7 +242,7 @@ class GetMonthParameterHandler(BaseHandler):
 			columns.append(col)
 		tx = None
 		try:
-			tx = yield db.begin()
+			tx = yield application.begin()
 			boilers = yield get_boilers_month_values(tx, year,
 								 month, columns)
 			self.render_json(boilers)
@@ -257,38 +259,60 @@ if __name__ == "__main__":
 	parser = argparse.ArgumentParser(description='VolComHoz')
 	parser.add_argument('--port', '-p', type=int, required=True,
 			    help='Port for the server running')
+	parser.add_argument('--test', action='store_true', default=False)
+	parser.add_argument('--test_args', nargs='*')
 	args = parser.parse_args()
 	secret_conf.parse_config()
-	db.connect(max_connections = 20, idle_seconds = 7200,
-		   wait_connection_timeout = 3, host = secret_conf.db_host,
-		   user = secret_conf.db_user, passwd = secret_conf.db_passwd,
-		   db = secret_conf.db_name, charset = "utf8"
-	)
-
-	app = tornado.web.Application(
-		handlers=[
-			(r'/', MainHandler),
-			(r'/upload', UploadHandler),
-			(r'/show_table', ShowHandler),
-			(r'/login', LoginHandler),
-			(r'/logout', LogoutHandler),
-			(r'/drop_report', DropHandler),
-			(r'/water_consum', WaterConsumHandler),
-			(r'/year_plot', YearPlotHandler),
-			(r'/get_year_parameter', GetYearParameterHandler),
-			(r'/temperature', TemperatureHandler),
-			(r'/get_month_parameter', GetMonthParameterHandler)
-			],
-		autoreload=True,
-		template_path="templates/",
-		static_path="static/",
-		cookie_secret=secret_conf.cookie_secret,
-		login_url='/login')
-	app.listen(args.port)
+	max_conn = secret_conf.max_db_connections
+	idle = secret_conf.db_idle_seconds
+	conn_timeout = secret_conf.db_connection_timeout
+	db_name = secret_conf.db_name
+	if args.test:
+		db_name = 'test_volgograd'
+	application.connect_db(max_connections=max_conn,
+			       idle_seconds=idle,
+			       wait_connection_timeout=conn_timeout,
+			       host=secret_conf.db_host,
+			       user=secret_conf.db_user,
+			       passwd=secret_conf.db_passwd,
+			       db=db_name,
+			       charset=secret_conf.db_charset)
+	application.handlers_list = [
+		(r'/', MainHandler),
+		(r'/upload', UploadHandler),
+		(r'/show_table', ShowHandler),
+		(r'/login', LoginHandler),
+		(r'/logout', LogoutHandler),
+		(r'/drop_report', DropHandler),
+		(r'/water_consum', WaterConsumHandler),
+		(r'/year_plot', YearPlotHandler),
+		(r'/get_year_parameter', GetYearParameterHandler),
+		(r'/temperature', TemperatureHandler),
+		(r'/get_month_parameter', GetMonthParameterHandler)
+	]
+	application.template_path = 'templates/'
+	application.static_path = 'static/'
+	application.login_url = '/login'
 	logger.setLevel(logging.DEBUG)
 	formatter = logging.Formatter('%(asctime)s - %(levelname)s - %(message)s')
 	sh = logging.StreamHandler()
 	sh.setFormatter(formatter)
 	logger.addHandler(sh)
 	logger.debug("Server is started on %s" % args.port)
-	tornado.ioloop.IOLoop.current().start()
+	if args.test:
+		argv = [sys.argv[0], ]
+		if args.test_args:
+			argv.extend(args.test_args)
+		sys.argv = argv
+		unittest.main()
+	else:
+		application.app = tornado.web.Application(
+			handlers=application.handlers_list,
+			autoreload=True,
+			template_path=application.template_path,
+			static_path=application.static_path,
+			cookie_secret=secret_conf.cookie_secret,
+			login_url=application.login_url
+		)
+		application.app.listen(args.port)
+		tornado.ioloop.IOLoop.current().start()

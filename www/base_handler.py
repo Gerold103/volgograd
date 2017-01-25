@@ -56,7 +56,10 @@ class BaseHandler(tornado.web.RequestHandler):
 	@tornado.gen.coroutine
 	def rollback_error(self, tx, e_hdr, e_msg):
 		self.render_error(e_hdr=e_hdr, e_msg=e_msg)
-		yield self.flush()
+		try:
+			yield self.flush()
+		except:
+			pass
 		if tx:
 			yield tx.rollback()
 

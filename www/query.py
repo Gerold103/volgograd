@@ -261,6 +261,15 @@ def insert_boiler_room(tx, dist_id, name):
 	yield tx.execute(query=sql, params=params)
 
 ##
+# Insert a new user into the database.
+#
+@tornado.gen.coroutine
+def insert_user(tx, email, password, salt, name, rights):
+	sql = "INSERT INTO users VALUES (NULL, %s, %s, %s, %s, %s)"
+	params = (email, password, salt, name, rights)
+	yield tx.execute(query=sql, params=params)
+
+##
 # Get a value from iterable object by name, or None, if the object doesn't
 # contain the name.
 #
@@ -458,10 +467,17 @@ def get_user_by_email(tx, cols, email):
 	return cursor.fetchone()
 
 ##
-# Insert the user to the users table.
+# Switch the active database on the test database. Then clear it
+# to start testing from the 'empty paper'.
 #
 @tornado.gen.coroutine
-def insert_user(tx, email, pass_hash):
-	sql = "INSERT INTO users(email, pass_hash) VALUES (%s, %s)"
-	params = (email, pass_hash)
-	yield tx.execute(query=sql, params=params)
+def prepare_tests(tx, old_db_name, test_db_name):
+	sql = "DROP DATABASE IF EXISTS {}; CREATE DATABASE {}; USE {}; "\
+	      "CREATE TABLE reports LIKE {}.reports; "\
+	      "CREATE TABLE districts LIKE {}.districts; "\
+	      "CREATE TABLE boiler_rooms LIKE {}.boiler_rooms; "\
+	      "CREATE TABLE boiler_room_reports LIKE {}.boiler_room_reports; "\
+	      "CREATE TABLE users LIKE {}.users; "\
+	      .format(test_db_name, test_db_name, test_db_name, old_db_name,
+		      old_db_name, old_db_name, old_db_name, old_db_name)
+	yield tx.execute(sql)

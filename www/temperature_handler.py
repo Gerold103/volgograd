@@ -7,7 +7,7 @@ import tornado
 import tornado.web
 import tornado.gen
 
-import db
+import application
 from query import *
 from constants import *
 from base_handler import BaseHandler
@@ -49,7 +49,7 @@ class TemperatureHandler(BaseHandler):
 			return
 		tx = None
 		try:
-			tx = yield db.begin()
+			tx = yield application.begin()
 			#
 			# We don't need to render a first
 			# parameter, because it will be requested

@@ -11,6 +11,10 @@ db_user = None
 db_passwd = None
 db_name = "volgograd"
 cookie_secret = None
+max_db_connections = 20
+db_idle_seconds = 7200
+db_connection_timeout = 3
+db_charset = 'utf8'
 
 pepper = None
 
@@ -37,3 +41,11 @@ def parse_config():
 		db_passwd = conf['db_passwd']
 		cookie_secret = conf['cookie_secret']
 		pepper = conf['pepper']
+		if 'max_db_connections' in conf:
+			max_db_connections = conf['max_db_connections']
+		if 'db_idle_seconds' in conf:
+			db_idle_seconds = conf['db_idle_seconds']
+		if 'db_connection_timeout' in conf:
+			db_connection_timeout = conf['db_connection_timeout']
+		if 'db_charset' in conf:
+			db_charset = conf['db_charset']

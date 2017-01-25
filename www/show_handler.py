@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 
-import db
+import application
 import calendar
 from datetime import date
 
@@ -33,7 +33,7 @@ class ShowHandler(BaseHandler):
 		#
 		tx = None
 		try:
-			tx = yield db.begin()
+			tx = yield application.begin()
 			uploaded_days_raw = yield get_report_dates_by_year(tx,
 									   year)
 		except Exception:
@@ -143,7 +143,7 @@ class ShowHandler(BaseHandler):
 			return
 		tx = None
 		try:
-			tx = yield db.begin()
+			tx = yield application.begin()
 			report = yield get_full_report_by_date(tx, full_date)
 			if not report:
 				self.rollback_error(tx, e_hdr=ERR_404,
