@@ -307,8 +307,8 @@ def parse_xls(file):
 		wb = open_xls_as_xlsx(file)
 		logger.warning('Success')
 	a = wb.active
-	if get_cell(a, 1, 2) == 'Сводные данные о работе котельных  МУП '\
-				'"ВКХ" на':
+	if get_cell(a, 1, 2) == 'Сводные данные о работе котельных ООО '\
+				'"Концессии теплоснабжения" на':
 		return parse_xls_without_forecast(a)
 	else:
 		return parse_xls_with_forecast(a);

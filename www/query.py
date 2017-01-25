@@ -109,7 +109,7 @@ def get_districts_with_boilers(tx):
 @tornado.gen.coroutine
 def get_report_by_date(tx, date, cols):
 	sql = "SELECT {} FROM reports WHERE date = "\
-	      "STR_TO_DATE(%s, %s)".format(','.format(cols))
+	      "STR_TO_DATE(%s, %s)".format(','.join(cols))
 	params = (date, '%d.%m.%Y')
 	cursor = yield tx.execute(query=sql, params=params)
 	return cursor.fetchone()
