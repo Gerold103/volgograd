@@ -6,6 +6,18 @@
 
 <div class="container-fluid">
 	<h2 class="col-md-12" style="margin:20px 0">Управление пользователями</h2>
+	{% if suc_msg %}
+		<div class="col-md-12 alert alert-success" role="alert" id="suc_msg"></div>
+		<script>
+			suc_act_msg = {
+				'del' : 'Пользователь успешно удален',
+				'edit': 'Пользователь успешно отредактирован',
+				'add' : 'Пользователь успешно добавлен'
+			};
+			var bold_text = suc_act_msg['{{ suc_msg }}'];
+			$('#suc_msg').text(bold_text).css("font-weight","Bold");;
+		</script>
+	{% end %}
 	<div class="col-md-8">
 		<table class="table table-hover" id="users_table">
 			<thead>
@@ -129,66 +141,66 @@
 
 						<!-- form NAME -->
 						<div class="form-group col-md-12" style="float: none">
-							<label class="control-label" for="name_new_user">
+							<label class="control-label" for="name_user">
 								Имя
 							</label>
 							<div class="input-group col-md-12">
 								<span class="input-group-addon">
 									<i class="glyphicon glyphicon-user"></i>
 								</span>
-								<input type="text" class="form-control" id="name_new_user" name="name" placeholder="Имя" pattern="^[A-Za-zА-Яа-яЁё0-9]+(?:[ _-][A-Za-zА-Яа-яЁё0-9]+)*$" required autofocus>
+								<input type="text" class="form-control" id="name_user" name="name" placeholder="Имя" pattern="^[A-Za-zА-Яа-яЁё0-9]+(?:[ _-][A-Za-zА-Яа-яЁё0-9]+)*$" required autofocus>
 							</div>
 						</div>
 
 						<!-- form EMAIL -->
 						<div class="form-group col-md-12" style="float: none">
-							<label class="control-label" for="email_new_user">
+							<label class="control-label" for="email_user">
 								Email
 							</label>
 							<div class="input-group col-md-12">
 								<span class="input-group-addon" role="input">
 									<i class="glyphicon glyphicon-envelope"></i>
 								</span>
-								<input type="email" class="form-control" id="email_new_user" name="email" placeholder="Email" required>
+								<input type="email" class="form-control" id="email_user" name="email" placeholder="Email" required>
 							</div>
 						</div>
 
 						<!-- form OLD PASSWORD for editing-->
 						<div class="form-group col-md-12" id="old_password_edit" style="float: none">
-							<label class="control-label" for="old_password_new_user">
+							<label class="control-label" for="old_password_user">
 								Старый пароль
 							</label>
 							<div class="input-group col-md-12">
 								<span class="input-group-addon">
 									<i class="glyphicon glyphicon-lock"></i>
 								</span>
-								<input type="password" class="form-control" id="old_password_new_user" name="old_password" placeholder="Старый пароль">
+								<input type="password" class="form-control" id="old_password_user" name="old_password" placeholder="Старый пароль">
 							</div>
 						</div>
 
 						<!-- form PASSWORD -->
 						<div class="form-group col-md-12" style="float: none">
-							<label class="control-label" for="password_new_user">
+							<label class="control-label" for="password_user">
 								Пароль
 							</label>
 							<div class="input-group col-md-12">
 								<span class="input-group-addon">
 									<i class="glyphicon glyphicon-lock"></i>
 								</span>
-								<input type="password" class="form-control" id="password_new_user" name="password" placeholder="Пароль">
+								<input type="password" class="form-control" id="password_user" name="password" placeholder="Пароль">
 							</div>
 						</div>
 
 						<!-- form CONFIRM PASSWORD -->
 						<div class="form-group col-md-12" style="float: none">
-							<label class="control-label" for="confirm_password_new_user">
+							<label class="control-label" for="confirm_password_user">
 								Повторите пароль
 							</label>
 							<div class="input-group col-md-12">
 								<span class="input-group-addon">
 									<i class="glyphicon glyphicon-lock"></i>
 								</span>
-								<input type="password" class="form-control" id="confirm_password_new_user" name="confirm_password" placeholder="Повторите пароль">
+								<input type="password" class="form-control" id="confirm_password_user" name="confirm_password" placeholder="Повторите пароль">
 							</div>
 						</div>
 
@@ -214,7 +226,7 @@
 
 						<!-- </form> -->
 						<script>
-							var name_input = document.getElementById("name_new_user");
+							var name_input = document.getElementById("name_user");
 
 							MAX_NAME_LENGTH = 65535;
 							function validate_name(){
@@ -235,8 +247,8 @@
 
 						</script>
 						<script>
-							var password = document.getElementById("password_new_user");
-							var confirm_password = document.getElementById("confirm_password_new_user");
+							var password = document.getElementById("password_user");
+							var confirm_password = document.getElementById("confirm_password_user");
 
 							function validate_password(){
 								if(password.value != confirm_password.value) {
@@ -274,8 +286,8 @@
 			$('#submit_button').text('Добавить');
 			$('#modal_header').text('Добавление пользователя');
 			$('#old_password_edit').hide();
-			$('#password_new_user').prop('required', true);
-			$('#confirm_password_new_user').prop('required', true);
+			$('#password_user').prop('required', true);
+			$('#confirm_password_user').prop('required', true);
 
 			set_user_data('', '', 0);
 			$('#user_form').on('submit', add_user);
@@ -285,8 +297,8 @@
 			$('#submit_button').text('Сохранить');
 			$('#modal_header').text('Редактирование пользователя');
 			$('#old_password_edit').show();
-			$('#password_new_user').prop('required', false);
-			$('#confirm_password_new_user').prop('required', false);
+			$('#password_user').prop('required', false);
+			$('#confirm_password_user').prop('required', false);
 
 			user_id = $('#users_table')
 			.find('.bg-primary')
@@ -321,8 +333,8 @@
 		}
 
 		function set_user_data(name, email, rights) {
-			$('#name_new_user').val(name);
-			$('#email_new_user').val(email);
+			$('#name_user').val(name);
+			$('#email_user').val(email);
 
 			{% for i, p in enumerate(pers) %}
 			var value = Boolean({{ pers[p][0] }} & rights);
