@@ -1,0 +1,305 @@
+{% extends "base.html" %}
+
+{% block title %}Температура за месяц{% end %}
+
+{% block body %}
+
+<script type="text/javascript">
+	var params_config = {
+		'day_average_temp_deviation1': {
+			title: 'Среднесуточная температура, T<sub>1</sub>',
+			real: {
+				id: 'all_day_real_temp1'/*,
+				boiler_values: {
+					boiler_id: [val1, ..., valN],
+					...
+				}
+				*/
+			},
+			expected: {
+				id: 'all_day_expected_temp1'
+			},
+			border_low: -0.03,
+			border_up: 0.03
+		},
+		'day_average_temp_deviation2': {
+			title: 'Среднесуточная температура, T<sub>2</sub>',
+			real: {
+				id: 'all_day_real_temp2'
+			},
+			expected: {
+				id: 'all_day_expected_temp2'
+			},
+			border_low: -0.03,
+			border_up: 0.03
+		},
+		'night_average_temp_deviation1': {
+			title: 'Температура ночью, T<sub>1</sub>',
+			real: {
+				id: 'all_night_real_temp1'
+			},
+			expected: {
+				id: 'all_night_expected_temp1'
+			},
+			border_low: -0.03,
+			border_up: 0.03
+		},
+		'night_average_temp_deviation2': {
+			title: 'Температура ночью, T<sub>2</sub>',
+			real: {
+				id: 'all_night_real_temp2'
+			},
+			expected: {
+				id: 'all_night_expected_temp2'
+			},
+			border_low: -0.03,
+			border_up: 0.03
+		},
+		'make_up_water_consum_deviation': {
+			title: 'Расход подпиточной воды',
+			real: {
+				id: 'make_up_water_consum_real_ph'
+			},
+			expected: {
+				id: 'make_up_water_consum_expected_ph'
+			},
+			border_up: 0
+		}
+	};
+
+	var districts = [];
+	var district;
+	var room;
+	{% for d in districts %}
+		district = {};
+		district.title = "{{ escape(d['title']) }}";
+		district.rooms = [];
+		{% for b in d['rooms'] %}
+			room = {};
+			room.id = {{ b['id'] }};
+			room.name = "{{ escape(b['name']) }}";
+			district.rooms.push(room);
+		{% end %}
+		districts.push(district);
+	{% end %}
+</script>
+
+<h1>Температура<br>{{ month_names[month - 1] }}, {{ year }}</h1>
+
+<div style="padding-left: 15px;" class="form-inline form-group">
+	<label for="table-param">Параметр</label>
+	<select class="form-control" id="table-param">
+	</select>
+	<button class="btn btn-primary" onclick="update_table();">Обновить таблицу</button>
+</div>
+
+<div class="container-fluid boiler_rooms_table" align="center">
+	<table class="table table-bordered table-striped table-hover">
+		<thead>
+		    <tr align="center">
+			<td> Район </td>
+			<td> Котельная </td>
+			{% for day in range(1, days_count + 1) %}
+				<td>
+					<a href="/show_table?date={{ get_date(year, month, day) }}">
+						{{ day }}
+					</a>
+				</td>
+			{% end %}
+		    </tr>
+		</thead>
+		<tbody id="deviations-table">
+		</tbody>
+	</table>
+</div>
+
+<script type="text/javascript">
+	function download_and_show_parameters(id) {
+		var real_config = params_config[id].real;
+		var expec_config = params_config[id].expected;
+		var real_id = real_config.id;
+		var expected_id = expec_config.id;
+		$.ajax({
+			url: '/get_month_parameter',
+			data: { year: {{ year }}, month: {{ month }},
+				columns: [real_id, expected_id] },
+			dataType: 'json',
+			success: function(data, text_status) {
+				console.log('Received status: ' + text_status);
+				if ('error' in data) {
+					alert('Ошибка! ' + data.error)
+					return;
+				}
+				var resp = data.response;
+				for (var boiler_id in resp) {
+					var params = resp[boiler_id];
+					var real_params = params[real_id];
+					var expec_params = params[expected_id];
+					var real_values = [];
+					var expec_values = [];
+					for (var day = 0;
+					     day < {{ days_count }}; ++day) {
+						if (! (day in real_params) ||
+						    real_params[day] == null)
+							real_values.push(NaN);
+						else
+							real_values.push(real_params[day]);
+						if (! (day in expec_params) ||
+						    expec_params[day] == null)
+							expec_values.push(NaN);
+						else
+							expec_values.push(expec_params[day]);
+					}
+					if (! ('boiler_values' in real_config))
+						real_config.boiler_values = {}
+					real_config.boiler_values[boiler_id] = real_values;
+
+					if (! ('boiler_values' in expec_config))
+						expec_config.boiler_values = {}
+					expec_config.boiler_values[boiler_id] = expec_values;
+				}
+				generate_table(id);
+			}
+		});
+	};
+
+	function border_violation(rval, eval, error_class) {
+		var ehtml = document.createElement('span');
+		ehtml.className = 'text-success multiple-white-space';
+		var rhtml = document.createElement('span');
+		rhtml.className = error_class + ' multiple-white-space';
+		ehtml.innerHTML = string_fixed_width(eval, 5);
+		rhtml.innerHTML = string_fixed_width(rval, 5);
+		var dash = document.createElement('span');
+		dash.innerHTML = ' - ';
+		var result = document.createElement('span');
+		result.className = 'no-wrap';
+		result.appendChild(ehtml);
+		result.appendChild(dash);
+		result.appendChild(rhtml);
+		return result;
+	};
+
+	function border_up_violation(rval, eval) {
+		return border_violation(rval, eval, 'text-danger');
+	};
+
+	function border_low_violation(rval, eval) {
+		return border_violation(rval, eval, 'text-warning');
+	};
+
+	function generate_one_column(day, tds, real_vals, expec_vals,
+				     border_up, border_low) {
+		var td = document.createElement('td');
+		if (real_vals.length == 0 || isNaN(real_vals[day]) ||
+		    expec_vals.length == 0 || isNaN(expec_vals[day])) {
+			td.innerHTML = '';
+			tds.push(td);
+			return 0;
+		}
+		var rval = real_vals[day];
+		var eval = expec_vals[day];
+		var percent = (rval - eval + 0.0) / eval;
+		if (! isNaN(border_up) && percent > border_up) {
+			td.appendChild(border_up_violation(rval, eval));
+			tds.push(td);
+		} else if (! isNaN(border_low) && percent < border_low) {
+			td.appendChild(border_low_violation(rval, eval));
+			tds.push(td);
+		} else {
+			td.innerHTML = '';
+			tds.push(td);
+			return 0;
+		}
+		return 1;
+	}
+
+	function generate_table(param_id) {
+		var config = params_config[param_id];
+		var real = config.real;
+		var expec = config.expected;
+		if (! ('boiler_values' in real)) {
+			download_and_show_parameters(param_id);
+			return;
+		}
+		var table = document.getElementById('deviations-table');
+		clear_childs(table);
+		var border_low = NaN;
+		var border_up = NaN;
+		if ('border_up' in config)
+			border_up = config.border_up;
+		if ('border_low' in config)
+			border_low = config.border_low;
+
+		for (var d = 0; d < districts.length; ++d) {
+			var district = districts[d];
+			var len = district.rooms.length;
+			var rows = [];
+			for (var i = 0; i < len; ++i) {
+				var row = {};
+				var boiler = district.rooms[i];
+				var b_id = boiler.id;
+				var real_vals = {};
+				if (b_id in real.boiler_values)
+					real_vals = real.boiler_values[b_id];
+				var expec_vals = {};
+				if (b_id in expec.boiler_values)
+					expec_vals = expec.boiler_values[b_id];
+
+				row.id = b_id;
+				row.name = boiler.name;
+				row.tds = [];
+				var set_tds = 0;
+				for (var day = 1; day <= {{ days_count }};
+				     ++day) {
+					set_tds +=
+						generate_one_column(day, row.tds,
+								    real_vals,
+								    expec_vals,
+								    border_up,
+								    border_low);
+				}
+				if (set_tds != 0)
+					rows.push(row);
+			}
+			for (var i = 0; i < rows.length; ++i) {
+				var row = rows[i];
+				var tr = document.createElement('tr');
+				tr.setAttribute('data-boiler-id', row.id);
+				if (i == 0) {
+					var td = document.createElement('td');
+					td.setAttribute('rowspan', rows.length);
+					td.innerHTML = district.title;
+					tr.appendChild(td);
+				}
+				var td = document.createElement('td');
+				td.innerHTML = row.name;
+				tr.appendChild(td);
+				for (var k = 0; k < row.tds.length; ++k) {
+					tr.appendChild(row.tds[k]);
+				}
+				table.appendChild(tr);
+			}
+		}
+	};
+
+	function update_table() {
+		var param = document.getElementById('table-param').value;
+		generate_table(param);
+	};
+
+	window.onload = function() {
+		/* Build selector for parameters. */
+		var select_param = document.getElementById('table-param');
+		for (var id in params_config) {
+			var param = params_config[id];
+			var option = document.createElement('option');
+			option.setAttribute('value', id);
+			option.innerHTML = param['title'];
+			select_param.appendChild(option);
+		};
+		update_table();
+	};
+</script>
+
+{% end %}

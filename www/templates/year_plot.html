@@ -1,0 +1,444 @@
+{% extends "base.html" %}
+
+{% block title %}Температура за год{% end %}
+
+{% block links %}
+<script type="text/javascript" src="{{ static_url('js/Chart.bundle.js') }}"></script>
+{% end %}
+
+{% block body %}
+<h1>Температура за год {{ year }}</h1>
+
+<script type="text/javascript">
+	function ideal_temperature1(x) {
+		return 67.5 - 1.5 * x;
+	};
+
+	function ideal_temperature2(x) {
+		return 130.0/3.0 - 10.0/15.0 * x;
+	};
+
+	var params_config = {
+		'all_day_expected_temp1': {
+			'title': 'Среднесуточная температура, заданная T1',
+			'ideal': {
+				'get_y': ideal_temperature1,
+				'get_low': function(x) {
+					var y = ideal_temperature1(x);
+					return y * 0.97;
+				},
+				'get_up': function(x) {
+					var y = ideal_temperature1(x);
+					return y * 1.03;
+				},
+			}
+		},
+
+		'all_day_expected_temp2': {
+			'title': 'Среднесуточная температура, заданная T2',
+			'ideal': {
+				'get_y': ideal_temperature2,
+				'get_low': function(x) {
+					var y = ideal_temperature2(x);
+					return y * 0.97;
+				},
+				'get_up': function(x) {
+					var y = ideal_temperature2(x);
+					return y * 1.03;
+				},
+			}
+		},
+
+		'all_day_real_temp1': {
+			'title': 'Среднесуточная температура, фактическая T1',
+			'ideal': {
+				'get_y': ideal_temperature1,
+				'get_low': function(x) {
+					var y = ideal_temperature1(x);
+					return y * 0.97;
+				},
+				'get_up': function(x) {
+					var y = ideal_temperature1(x);
+					return y * 1.03;
+				},
+			}
+		},
+
+		'all_day_real_temp2': {
+			'title': 'Среднесуточная температура, фактическая T2',
+			'ideal': {
+				'get_y': ideal_temperature2,
+				'get_low': function(x) {
+					var y = ideal_temperature2(x);
+					return y * 0.97;
+				},
+				'get_up': function(x) {
+					var y = ideal_temperature2(x);
+					return y * 1.03;
+				},
+			}
+		},
+
+		'all_night_expected_temp1': {
+			'title': 'Температура ночью, заданная T1',
+			'ideal': {
+				'get_y': ideal_temperature1,
+				'get_low': function(x) {
+					var y = ideal_temperature1(x);
+					return y * 0.97;
+				},
+				'get_up': function(x) {
+					var y = ideal_temperature1(x);
+					return y * 1.03;
+				},
+			}
+		},
+
+		'all_night_expected_temp2': {
+			'title': 'Температура ночью, заданная T2',
+			'ideal': {
+				'get_y': ideal_temperature2,
+				'get_low': function(x) {
+					var y = ideal_temperature2(x);
+					return y * 0.97;
+				},
+				'get_up': function(x) {
+					var y = ideal_temperature2(x);
+					return y * 1.03;
+				},
+			}
+		},
+
+		'all_night_real_temp1': {
+			'title': 'Температура ночью, фактическая T1',
+			'ideal': {
+				'get_y': ideal_temperature1,
+				'get_low': function(x) {
+					var y = ideal_temperature1(x);
+					return y * 0.97;
+				},
+				'get_up': function(x) {
+					var y = ideal_temperature1(x);
+					return y * 1.03;
+				},
+			}
+		},
+
+		'all_night_real_temp2': {
+			'title': 'Температура ночью, фактическая T2',
+			'ideal': {
+				'get_y': ideal_temperature2,
+				'get_low': function(x) {
+					var y = ideal_temperature2(x);
+					return y * 0.97;
+				},
+				'get_up': function(x) {
+					var y = ideal_temperature2(x);
+					return y * 1.03;
+				},
+			}
+		}
+	};
+
+	/**
+	 * Array of air temperatures alogn the year. If the
+	 * temperature of a day is unknown then save NaN to show
+	 * gaps on the plot.
+	 */
+	var year_air_temperature = [
+		{% for day in range(1, days_count + 1) %}
+			{% if day in year_temperature and year_temperature[day] != None %}
+				{{ year_temperature[day] }},
+			{% else %}
+				NaN,
+			{% end %}
+		{% end %}
+	];
+	/**
+	 * Identifiers of all boilers and its parameters along
+	 * the year.
+	 */
+	var boiler_params = {
+		{% for item in boiler_ids %}
+			{{ item['id'] }}: {},
+		{% end %}
+	};
+	/**
+	 * Save the first parameter to show it after the HTML page
+	 * loading.
+	 */
+	boiler_params[{{ boiler_ids[0]['id'] }}] = {
+		'{{ first_column }}': [
+			{% for day in range(1, days_count + 1) %}
+				{% if day in first_report %}
+					{{ first_report[day][first_column] }},
+				{% else %}
+					NaN,
+				{% end %}
+			{% end %}
+		]
+	};
+</script>
+
+<div class="container plot-control-form">
+	<div class="panel panel-default">
+		<div class="panel-heading">
+			Контрольная панель графика
+		</div>
+		<div class="panel-body form-inline form-group">
+			<div class="input-group">
+				<div class="input-group-addon">Минимум Oy</div>
+				<input type="text" id="plot-y-min" placeholder="по умолчанию" class="form-control">
+			</div>
+			<div class="input-group">
+				<div class="input-group-addon">Максимум Oy</div>
+				<input type="text" id="plot-y-max" placeholder="по умолчанию" class="form-control">
+			</div>
+			<div class="input-group">
+				<div class="input-group-addon">Котельная</div>
+				<select class="form-control" id="plot-boiler-id">
+					{% for item in boiler_ids %}
+						<option value="{{ item['id'] }}">{{ item['title'] }}</option>
+					{% end %}
+				</select>
+			</div>
+			<br><br>
+			<div class="input-group">
+				<div class="input-group-addon">Минимум Ox</div>
+				<input type="text" id="plot-x-min" placeholder="по умолчанию" class="form-control">
+			</div>
+			<div class="input-group">
+				<div class="input-group-addon">Максимум Ox</div>
+				<input type="text" id="plot-x-max" placeholder="по умолчанию" class="form-control">
+			</div>
+			<div class="input-group">
+				<div class="input-group-addon">Параметр</div>
+				<select class="form-control" id="plot-param">
+				</select>
+			</div>
+			<br><br>
+			<button class="btn btn-primary" onclick="update_plot();">Обновить график</button>
+		</div>
+	</div>
+</div>
+<div class="plot-container">
+	<canvas id="plot"></canvas>
+	<div class="chartjs-tooltip" id="plot-tooltip"></div>
+</div>
+
+{% include "plot_builder.html" %}
+
+<script type="text/javascript">
+	var customTooltips = function (tooltip) {
+		$(this._chart.canvas).css("cursor", "pointer");
+
+		$(".chartjs-tooltip").css({
+			opacity: 0,
+		});
+
+		if (!tooltip || !tooltip.opacity) {
+			return;
+		}
+
+		if (tooltip.dataPoints.length > 0) {
+			tooltip.dataPoints.forEach(function (dataPoint) {
+				var content = 'Воздух: ' + dataPoint.xLabel + '<br>Вода: ' + dataPoint.yLabel;
+				var $tooltip = $("#plot-tooltip");
+				$tooltip.html(content);
+				$tooltip.css({
+					opacity: 1,
+					top: dataPoint.y + "px",
+					left: dataPoint.x + "px",
+				});
+			});
+		}
+	};
+
+	plot_set_title("{{ boiler_ids[0]['title'] }}");
+	plot_options.hover.intersect = false;
+	plot_options.hover.mode = 'index';
+	plot_set_xLabel('Температура воздуха');
+	plot_set_yLabel('Температура нагрева');
+
+	function download_and_plot_parameter(control_data) {
+		var param = control_data.param;
+		var boiler_id = control_data.boiler_id;
+		$.ajax({
+			url: '/get_year_parameter',
+			data: { boiler_id: boiler_id, param_name: param,
+				year: {{ year }} },
+			dataType: 'json',
+			success: function(data, text_status) {
+				console.log('Received status: ' + text_status);
+				if ('error' in data) {
+					alert('Ошибка! ' + data['error']);
+					return;
+				}
+				var resp = data['response'];
+				var values = [];
+				for (var day = 1; day <= {{ days_count }};
+				     ++day) {
+					if (day in resp)
+						values.push(resp[day][param]);
+					else
+						values.push(NaN);
+				}
+				boiler_params[boiler_id][param] = values;
+				/*
+				 * Forbid reuploading of the same
+				 * parameter right after it
+				 * already happened.
+				 * Reuploading is possible, if the
+				 * server reponsed with an
+				 * unexpected error and we didn't
+				 * save the needed parameter, but
+				 * try to plot it.
+				 */
+				control_data.can_upload = false;
+				plot_parameter(control_data);
+			}
+		});
+	};
+	function points_compare(a, b) {
+		return a.x - b.x;
+	};
+	function plot_parameter(control_data) {
+		var boiler = boiler_params[control_data.boiler_id];
+		var param_id = control_data.param;
+		var param = params_config[param_id];
+		var title = param['title'];
+		var real_values = [];
+		var ideal_values = [];
+		var ideal_values_low = [];
+		var ideal_values_up = [];
+		if (! (param_id in boiler)) {
+			if (control_data.can_upload)
+				download_and_plot_parameter(control_data);
+			return;
+		}
+		for (var day = 0; day < {{ days_count }}; ++day) {
+			var real_param = boiler[param_id][day];
+			if (isNaN(year_air_temperature[day]) ||
+			    isNaN(real_param))
+				continue;
+			var x = year_air_temperature[day];
+			if ('x_min' in control_data && x < control_data.x_min)
+				continue;
+			if ('x_max' in control_data && x > control_data.x_max)
+				continue;
+			real_values.push({ x: x, y: real_param });
+			ideal_values.push({ x: x, y: param.ideal.get_y(x) });
+			ideal_values_low.push({ x: x,
+						y: param.ideal.get_low(x) });
+			ideal_values_up.push({ x: x,
+						y: param.ideal.get_up(x) });
+		}
+
+		ideal_values.sort(points_compare);
+		ideal_values_low.sort(points_compare);
+		ideal_values_up.sort(points_compare);
+		real_values.sort(points_compare);
+
+		if (plot_is_created())
+			get_plot_object().destroy();
+
+		plot_clear_data();
+		plot_set_title(title);
+		plot_add_data({ label: 'Реальные значения', color: '#8a9bff',
+				type: 'bubble', data: real_values });
+		plot_add_data({ label: 'Идеальные значения', color: '#c3ffcd',
+				type: 'line', data: ideal_values,
+				no_points: true });
+
+		/*
+		 * Border dash [x, y] means that line will have
+		 * gaps length y pixels and dashes with x pixels
+		 * length:
+		 * ----     ----     ----     ----    ...
+		 *  x    y   x    y    x   y    x     ...
+		 */
+		plot_add_data({ label: 'Идеальные значения, нижняя граница',
+				color: '#e4dd28', type: 'line',
+				data: ideal_values_low, no_points: true,
+				border_dash: [5, 8] });
+		plot_add_data({ label: 'Идеальные значения, верхняя граница',
+				color: '#ffbbbb', type: 'line',
+				data: ideal_values_up, no_points: true,
+				border_dash: [5, 8] });
+		plot_object_set(new Chart(get_plot_DOM(),
+					  { type: 'bubble', data: plot_data,
+					    options: plot_options }));
+
+		var x_max = plot_get_x_max();
+		var x_min = plot_get_x_min();
+		/*
+		 * The plot showed with ChartJS can show some gaps
+		 * on left and right sides of the plot. To fill
+		 * these gaps with our ideal values it is need to
+		 * get left Ox border, right Ox border
+		 * (x_min, x_max) and calculate ideal functions in
+		 * these points.
+		 */
+		var was_updated = false;
+		if (ideal_values.length > 0) {
+			if (x_min != ideal_values[0].x) {
+				real_values.unshift({x: NaN,  y: NaN});
+				ideal_values.unshift({
+					x: x_min, y: param.ideal.get_y(x_min)
+				});
+				ideal_values_low.unshift({
+					x: x_min, y: param.ideal.get_low(x_min)
+				});
+				ideal_values_up.unshift({
+					x: x_min, y: param.ideal.get_up(x_min)
+				});
+				was_updated = true;
+			}
+			if (x_max != ideal_values[ideal_values.length - 1].x) {
+				real_values.push({x: NaN,  y: NaN});
+				ideal_values.push({
+					x: x_max, y: param.ideal.get_y(x_max)
+				});
+				ideal_values_low.push({
+					x: x_max, y: param.ideal.get_low(x_max)
+				});
+				ideal_values_up.push({
+					x: x_max, y: param.ideal.get_up(x_max)
+				});
+				was_updated = true;
+			}
+		}
+		if (was_updated)
+			get_plot_object().update();
+	};
+
+	function read_params(control_data) {
+		var boiler_id = document.getElementById("plot-boiler-id").value;
+		var param = document.getElementById("plot-param").value;
+		control_data.boiler_id = boiler_id;
+		control_data.param = param;
+		control_data.can_upload = true;
+	};
+
+	plot_set_builder(plot_parameter);
+	plot_set_param_reader(read_params);
+
+	window.onload = function() {
+		/* Build selector for parameters. */
+		var select_param = document.getElementById('plot-param');
+		for (var id in params_config) {
+			var param = params_config[id];
+			var option = document.createElement('option');
+			option.setAttribute('value', id);
+			option.innerHTML = param['title'];
+			select_param.appendChild(option);
+		}
+
+		/* Plot the first parameter of the first boiler. */
+		plot_parameter({ boiler_id: {{ boiler_ids[0]['id'] }},
+				 param: "{{ first_column }}",
+				 can_upload: false });
+	};
+</script>
+
+{% end %}

@@ -6,9 +6,6 @@
 
 <div class="container-fluid">
 	<h2 class="col-md-12" style="margin:20px 0">Управление пользователями</h2>
-	{% if success_action_message %}
-		<div class="col-md-12 alert alert-success" role="alert"><b>{{ success_action_message }}</b></div>
-	{% end %}
 	<div class="col-md-8">
 		<table class="table table-hover" id="users_table">
 			<thead>
@@ -22,27 +19,27 @@
 			<tbody>
 				{% for i in range((page-1)*num_in_page, page*num_in_page) %}
 					{% if i < len(users) %}
-						<tr class="clickable-row" data-toggle="collapse" data-target="#row_details_{{ i }}" class="accordion-toggle">
+						<tr class="clickable-row" data-toggle="collapse" data-target="#row_details_{{ i }}" class="accordion-toggle" data-user-id="{{ users[i][0] }}">
 							<td>    
 								<div class="input-group">
 									<span class="glyphicon glyphicon-chevron-right"></span>
 								</div>
 							</td>
 							<td>{{ i+1 }}</td>
-							<td class="long_text"><span>{{ users[i][0] }}</span></td>
 							<td class="long_text"><span>{{ users[i][1] }}</span></td>
+							<td class="long_text"><span>{{ users[i][2] }}</span></td>
 						</tr>
 						<tr class="no-hover">
 					        <td colspan="6" class="hiddenRow" style="padding: 0; border-width: 0;" >
 					        	<div id="row_details_{{ i }}" class="accordian-body collapse row_details">
 					        	<ul>
-				        		{% for index, perm in enumerate(users[i][3]) %}
+				        		{% for index, perm in enumerate(users[i][4]) %}
 									<li>
 									{{ perm }}<br>
 									</li>
 								{% end %}
 								</ul>
-								{% if len(users[i][3]) == 0 %}
+								{% if len(users[i][4]) == 0 %}
 									Нет прав на данном сайте
 								{% end %%}
 					        	</div>
@@ -76,11 +73,36 @@
 
 	{% if enable_edit %}
 		<div class="col-md-2">
-			<a href="/users_management/add" class="btn btn-default btn-lg btn-block btn-success">Добавить</a>
-			<a id="delete_user_button" href="/users_management/delete" class="btn btn-default btn-lg btn-block btn-danger">Удалить</a>
-			<a id="edit_user_button" href="/users_management/edit" class="btn btn-default btn-lg btn-block btn-warning">Редактировать</a>
+			<a href="#" onclick="click_button_add()" class="btn btn-default btn-lg btn-block btn-success" data-toggle="modal" data-target="#modal_form">Добавить</a>
+			<a href="#" onclick="delete_user()" class="btn btn-default btn-lg btn-block btn-danger">Удалить</a>
+			<a href="#" onclick="click_button_edit()" class="btn btn-default btn-lg btn-block btn-warning" data-toggle="modal" data-target="#modal_form">Редактировать</a>
 		</div>
 	{% end %}
+
+	<form style="display: hidden" action="/users_management" method="POST" id="user_form_delete">
+	  	<input type="hidden" id="action" name="action" value=""/>
+	  	<input type="hidden" id="id" name="id" value=""/>
+	</form>
+	<script>
+		function delete_user() {
+			user_id = $('#users_table')
+					  	.find('.bg-primary')
+					  	.attr('data-user-id');
+			
+			if (!user_id) {
+				return;
+			}
+
+			var ok = confirm("Вы уверены? Действие нельзя будет отменить!");
+			if (!ok) {
+				return;
+			}
+
+			$('#action').val('del');
+			$('#id').val(user_id);
+			$("#user_form_delete").submit();
+		}
+	</script>
 
 	<!-- change a glyphicon when permissions are shown (hidden) -->
 	<script>
@@ -92,27 +114,254 @@
 		}
 	</script>
 
+	<!-- modal for adding and editing -->
+	<div class="modal fade" id="modal_form" role="dialog">
+		<div class="modal-dialog">
+
+			<div class="modal-content">
+				<div class="modal-header">
+					<button type="button" class="close" data-dismiss="modal">&times;</button>
+					<h4 class="modal-title">Редактирование пользователя</h4>
+				</div>
+				<div class="modal-body">
+					<form id="user_form" method="POST">
+
+						<!-- form NAME -->
+						<div class="form-group col-md-12" style="float: none">
+							<label class="control-label" for="name_new_user">
+								Имя
+							</label>
+							<div class="input-group col-md-12">
+								<span class="input-group-addon">
+									<i class="glyphicon glyphicon-user"></i>
+								</span>
+								<input type="text" class="form-control" id="name_new_user" name="name" placeholder="Имя" pattern="^[A-Za-zА-Яа-яЁё0-9]+(?:[ _-][A-Za-zА-Яа-яЁё0-9]+)*$" required>
+							</div>
+						</div>
+
+						<!-- form EMAIL -->
+						<div class="form-group col-md-12" style="float: none">
+							<label class="control-label" for="email_new_user">
+								Email
+							</label>
+							<div class="input-group col-md-12">
+								<span class="input-group-addon" role="input">
+									<i class="glyphicon glyphicon-envelope"></i>
+								</span>
+								<input type="email" class="form-control" id="email_new_user" name="email" placeholder="Email" required>
+							</div>
+						</div>
+
+						<!-- form OLD PASSWORD for editing-->
+						<div class="form-group col-md-12" id="old_password_edit" style="float: none">
+							<label class="control-label" for="old_password_new_user">
+								Старый пароль
+							</label>
+							<div class="input-group col-md-12">
+								<span class="input-group-addon">
+									<i class="glyphicon glyphicon-lock"></i>
+								</span>
+								<input type="password" class="form-control" id="old_password_new_user" name="old_password" placeholder="Старый пароль">
+							</div>
+						</div>
+
+						<!-- form PASSWORD -->
+						<div class="form-group col-md-12" style="float: none">
+							<label class="control-label" for="password_new_user">
+								Пароль
+							</label>
+							<div class="input-group col-md-12">
+								<span class="input-group-addon">
+									<i class="glyphicon glyphicon-lock"></i>
+								</span>
+								<input type="password" class="form-control" id="password_new_user" name="password" placeholder="Пароль">
+							</div>
+						</div>
+
+						<!-- form CONFIRM PASSWORD -->
+						<div class="form-group col-md-12" style="float: none">
+							<label class="control-label" for="confirm_password_new_user">
+								Повторите пароль
+							</label>
+							<div class="input-group col-md-12">
+								<span class="input-group-addon">
+									<i class="glyphicon glyphicon-lock"></i>
+								</span>
+								<input type="password" class="form-control" id="confirm_password_new_user" name="confirm_password" placeholder="Повторите пароль">
+							</div>
+						</div>
+
+						<!-- form RIGHTS -->
+						<div class="form-group col-md-12" style="float: none;">
+							<table class="col-md-12" style="float: none">
+								<tr>
+									{% for index, key in enumerate(pers) %}
+									<td><div class="checkbox">
+										<label>
+											<input type="hidden" id="{{ key }}_hidden" name="{{ key }}" value="False">
+											<input type="checkbox" id="{{ key }}_showen" name="{{ key }}" value="True">{{ pers[key][1] }}
+										</label>
+									</div></td>
+									{% if index % 2 %}
+								</tr>
+								<tr>
+									{% end %}
+									{% end %}
+								</tr>
+							</table>
+						</div>
+
+					</form>
+					<script>
+						var name_input = document.getElementById("name_new_user");
+
+						MAX_NAME_LENGTH = 65535;
+						function ValidateName(){
+							var value = name_input.value;
+							var pattern = new RegExp(name_input.pattern);
+							if (value.length > MAX_NAME_LENGTH) {
+								name_input.setCustomValidity("Длина поля должна быть меньше " + MAX_NAME_LENGTH + "!");
+							} 
+							else if (!pattern.test(value)) {
+								name_input.setCustomValidity("Имя может состоять из латинских букв, русских букв, цифр, пробела, нижнего подчеркивания и тире, причем начинаться должно с буквы или цифры!");
+							}
+							else {
+								name_input.setCustomValidity('');
+							}
+						}
+
+						name_input.onkeyup = ValidateName;
+
+					</script>
+					<script>
+						var password = document.getElementById("password_new_user");
+						var confirm_password = document.getElementById("confirm_password_new_user");
+
+						function ValidatePassword(){
+							if(password.value != confirm_password.value) {
+								confirm_password.setCustomValidity("Пароли не совпадают!");
+							} else {
+								confirm_password.setCustomValidity('');
+							}
+						}
+
+						password.onchange = ValidatePassword;
+						confirm_password.onkeyup = ValidatePassword;
+
+					</script>
+					<script>
+						$('#test2').click(function() {
+							$('input[type=checkbox]').each(function () {
+								if($(this).is(':checked')) {
+									$(this).siblings().prop('disabled', true);
+								}
+							})
+							return false;
+						});
+					</script>
+				</div>
+				<div class="modal-footer">
+					<button type="button" class="btn btn-default" data-dismiss="modal">Отменить</button>
+					<button type="button" class="btn btn-default" data-dismiss="modal" id="submit_button">
+
+					</button>
+					<script>
+						function add_user() {
+							var url = "/users_management?action=add";
+							$('#user_form').prop('action', url)
+							$('#name').val('name');
+							$('#email').val('email');
+							$('#user_form').submit();
+						}
+
+						function edit_user(event) {
+							var url = "/users_management?action=edit&id=" + event.data.user_id;
+							$('#user_form').prop('action', url)
+							$('#user_form').submit();
+						}
+
+						function click_button_add() {
+							$('#submit_button').text('Добавить');
+							$('#old_password_edit').hide();
+							$('#password_new_user').prop('required', true);
+							$('#confirm_password_new_user').prop('required', true);
+
+							set_user_data('', '', 0);
+							$('#submit_button').on('click', add_user);
+						}
+
+						function click_button_edit() {
+							$('#submit_button').text('Сохранить');
+							$('#old_password_edit').show();
+							$('#password_new_user').prop('required', false);
+							$('#confirm_password_new_user').prop('required', false);
+
+							user_id = $('#users_table')
+									   .find('.bg-primary')
+									   .attr('data-user-id');
+
+							if (!user_id) {
+								return;
+							}
+
+							fill_inputs_form(user_id);
+
+							$('#submit_button').on('click', { 
+								user_id: user_id
+							}, edit_user);
+						}
+
+						function fill_inputs_form(user_id) {
+							var name = '';
+							var email = '';
+							var rights = 0;
+							if (user_id) {
+								var users = {% raw users %};
+								var user = find_by_id(users, user_id);
+								if (user) {
+									name   = user[1];
+									email  = user[2];
+									rights = user[3];
+								}
+							}
+
+							set_user_data(name, email, rights);
+						}
+
+						function set_user_data(name, email, rights) {
+							$('#name_new_user').val(name);
+							$('#email_new_user').val(email);
+
+							{% for i, p in enumerate(pers) %}
+								var value = Boolean({{ pers[p][0] }} & rights);
+								$('#{{ p }}_showen').prop('checked', value);
+							{% end %}
+						}
+
+						function find_by_id(arr, elem) {
+							for (var i = 0; i < arr.length; i++) {
+								if (arr[i][0].toString() === elem) {
+									return arr[i];
+								}
+							}
+							return null;
+						}
+					</script>
+				</div>
+			</div>
+
+		</div>
+	</div>
+
 	<!-- select the row of a table-->
 	<script>
 		$('#users_table').on('click', '.clickable-row', function(event) {
 			if($(this).hasClass('bg-primary')){
 				$(this).removeClass('bg-primary');
-				CreateGetRequestEmail(null);
-
 			} else {
 				$(this).addClass('bg-primary').siblings().removeClass('bg-primary');
-				
-				email_value = $(this).children().eq(3).text();
-				CreateGetRequestEmail(email_value);
-
 			}
 		});
-
-		function CreateGetRequestEmail(email) {
-			var xhr = new XMLHttpRequest();
-			xhr.open('GET', '/users_management?email=' + email, true);
-			xhr.send();
-		}
 	</script>
 
 	<!-- generate a href for NEXT and PREV button -->

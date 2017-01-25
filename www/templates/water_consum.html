@@ -1,0 +1,214 @@
+{% extends "base.html" %}
+
+{% block title %}Расход воды за месяц{% end %}
+
+{% block links %}
+<script type="text/javascript" src="{{ static_url('js/Chart.bundle.js') }}"></script>
+{% end %}
+
+{% block body %}
+<h1>Расход воды<br>{{ month_names[month - 1] }}, {{ year }}</h1>
+
+{% set table_struct = [
+	{
+		'title': 'Расход воды<br>в час',
+		'childs': [
+			{
+				'title': 'Расчетный',
+				'id': 'net_water_consum_expected_ph',
+				'name': 'Расход воды в час, расчетный'
+			},
+			{
+				'title': 'Фактический',
+				'id': 'net_water_consum_real_ph',
+				'name': 'Расход воды в час, фактический'
+			}
+		]
+	},
+	{
+		'title': 'Расход<br>подпиточной<br>воды',
+		'childs': [
+			{
+				'title': 'Расчетный',
+				'id': 'make_up_water_consum_expected_ph',
+				'name': 'Расход подпиточной воды, расчетный'
+			},
+			{
+				'title': 'Фактический<br>на 6:00',
+				'id': 'make_up_water_consum_real_ph',
+				'name': 'Расход подпиточной воды, фактический на 6:00'
+			},
+			{
+				'title': 'Фактический<br>за сутки',
+				'id': 'make_up_water_consum_real_pd',
+				'name': 'Расход подпиточной воды, фактический за сутки'
+			},
+			{
+				'title': 'Фактический<br>за месяц',
+				'id': 'make_up_water_consum_real_pm',
+				'name': 'Расход подпиточной воды, фактический за месяц'
+			},
+		]
+	},
+] %}
+
+<div class="container-fluid boiler_rooms_table month-plot-table" align="center">
+	<table class="table table-bordered table-striped table-hover">
+		<thead>
+			<tr align="center">
+				<td colspan="2">День</td>
+
+				{% for day in range(1, month_range + 1) %}
+				<td><a href="/show_table?date={{ get_date(year, month, day) }}">
+					{{ day }}
+				</a></td>
+				{% end %}
+			</tr>
+		</thead>
+		<tbody>
+			{% autoescape None %}
+			{% for item in table_struct %}
+				{% if 'childs' in item %}
+					{% set first = item['childs'][0] %}
+					<tr align="center" id="{{ first['id'] }}" name="{{ first['name'] }}" data-offset="2">
+						<td rowspan="{{ len(item['childs']) }}">
+							{{ item['title'] }}
+						</td>
+					{% set childs_count = len(item['childs']) %}
+					{% for i in range(childs_count) %}
+						{% set child = item['childs'][i] %}
+						<td>{{ child['title'] }}</td>
+							{% for day in range(1, month_range + 1) %}
+								<td>{{ get_float(get_val(statistics, day), child['id']) }}</td>
+							{% end %}
+
+						</tr>
+						{% if i + 1 < childs_count %}
+							{% set next = item['childs'][i + 1] %}
+							<tr align="center" id="{{ next['id'] }}" name="{{ next['name'] }}" data-offset="1">
+						{% end %}
+					{% end %}
+				{% else %}
+					<tr align="center" id="{{ item['id'] }}" name="{{ item['title'] }}" data-offset="1">
+						<td colspan="2">{{ item['title'] }}</td>
+						{% for day in range(1, month_range + 1) %}
+							<td>{{ get_float(get_val(statistics, day), item['id']) }}</td>
+						{% end %}
+					</tr>
+				{% end %}
+			{% end %}
+		</tbody>
+	</table>
+</div>
+
+<div class="container plot-control-form">
+	<div class="panel panel-default">
+		<div class="panel-heading">
+			Контрольная панель графика
+		</div>
+		<div class="panel-body form-inline form-group">
+			<div class="input-group">
+				<div class="input-group-addon">Минимум Oy</div>
+				<input type="text" id="plot-y-min" placeholder="по умолчанию" class="form-control">
+			</div>
+			<div class="input-group">
+				<div class="input-group-addon">Максимум Oy</div>
+				<input type="text" id="plot-y-max" placeholder="по умолчанию" class="form-control">
+			</div>
+			<div class="input-group">
+				<div class="input-group-addon">Параметр</div>
+				<select class="form-control" id="plot-param">
+					{% for item in table_struct %}
+						{% if 'childs' in item %}
+							{% for child in item['childs'] %}
+								<option value="{{ child['id'] }}">{{ child['name'] }}</option>
+							{% end %}
+						{% else %}
+							<option value="{{ item['id'] }}">{{ item['title'] }}</option>
+						{% end %}
+					{% end %}
+				</select>
+			</div>
+			<br><br>
+			<div class="input-group">
+				<div class="input-group-addon">Минимум Ox</div>
+				<input type="text" id="plot-x-min" placeholder="по умолчанию" class="form-control">
+			</div>
+			<div class="input-group">
+				<div class="input-group-addon">Максимум Ox</div>
+				<input type="text" id="plot-x-max" placeholder="по умолчанию" class="form-control">
+			</div>
+			<button class="btn btn-primary" onclick="update_plot();">Обновить график</button>
+		</div>
+	</div>
+</div>
+<canvas id="plot" style="max-height: 600px;"></canvas>
+
+{% include "plot_builder.html" %}
+
+<script type="text/javascript">
+	function plot_parameter(control_data) {
+		var $tr = $("#" + control_data.param);
+		var title = $tr.attr("name");
+		var offset = $tr.attr("data-offset");
+		var table_values = $tr.children().slice(offset);
+		var values = [];
+		var labels = [];
+		var day = 0;
+		table_values.map(function(k, v) {
+			++day;
+
+			/*
+			 * Skip all points bigger or smaller
+			 * Ox borders.
+			 */
+			if ('x_min' in control_data && day < control_data.x_min)
+				return;
+			if ('x_max' in control_data && day > control_data.x_max)
+				return;
+
+			labels.push(day);
+			if (v.innerHTML != '-')
+				values.push(parseFloat(v.innerHTML));
+			else
+				/*
+				 * Need to add NaN to show gaps on
+				 * the plot.
+				 */
+				values.push(NaN);
+		});
+
+		/*
+		 * Recreate the plot if exists to show new data
+		 * and delete old.
+		 */
+		if (plot_is_created()) {
+			get_plot_object().destroy();
+		}
+		plot_clear_data();
+		plot_set_labels(labels);
+		plot_add_data({ label: 'Значения', color: 'rgb(75, 192, 192)',
+			        data: values });
+
+		plot_set_title(title);
+		plot_object_set(new Chart(get_plot_DOM(),
+				{ type: 'line', data: plot_data,
+				  options: plot_options }));
+	};
+
+	function read_param(control_data) {
+		var param = document.getElementById("plot-param").value;
+		control_data.param = param;
+	};
+
+	plot_set_builder(plot_parameter);
+	plot_set_param_reader(read_param);
+
+	window.onload = function() {
+		update_plot();
+	};
+	$("tbody tr").click(function(e) {
+		plot_parameter({ param: e.currentTarget.id });
+	});
+</script>
+{% end %}

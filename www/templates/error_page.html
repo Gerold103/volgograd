@@ -1,9 +1,14 @@
 {% extends "base.html" %}
 
-{% block title %}ВолКомХоз: Ошибка{% end %}
+{% block title %}Ошибка{% end %}
 
 {% block body %}
 
+{% block error_message %}
 <div class="alert alert-danger" role="alert"><b>{{ error_header }}!</b> {{ error_msg }}</div>
+{% end %}
+
+{% block error_details %}
+{% end %}
 
 {% end %}

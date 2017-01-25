@@ -24,6 +24,81 @@ boiler_room_report_cols = [
 ]
 
 ##
+# {
+# 	boiler_id: {
+# 		parameter: {
+# 			day1: val1,
+# 			day2: val2,
+# 			...
+# 		},
+# 		...
+# 	},
+# 	...
+# }
+#
+@tornado.gen.coroutine
+def get_boilers_month_values(tx, year, month, columns):
+	sql = 'SELECT boiler_room_id, DAY(date), {} FROM boiler_room_reports JOIN reports'\
+	      ' ON(report_id = reports.id) WHERE '\
+	      'YEAR(date) = %s AND MONTH(date) = %s'.format(",".join(columns))
+	params = (year, month)
+	cursor = yield tx.execute(query=sql, params=params)
+	boilers = {}
+	row = cursor.fetchone()
+	while row:
+		boiler_id = row[0]
+		day = row[1]
+		parameters = {}
+		if boiler_id in boilers:
+			parameters = boilers[boiler_id]
+		else:
+			boilers[boiler_id] = parameters
+		for i in range(2, len(columns) + 2):
+			val = row[i]
+			col = columns[i - 2]
+			values = {}
+			if col in parameters:
+				values = parameters[col]
+			else:
+				parameters[col] = values
+			values[day] = val
+		row = cursor.fetchone()
+	return boilers
+
+##
+# Returns the array with values:
+# { 'title': title_of_a_district, 'rooms':
+#   [
+#     {'id': boiler_id, 'name': boiler_name},
+#     ...
+#   ]
+# }
+#
+@tornado.gen.coroutine
+def get_districts_with_boilers(tx):
+	sql = "SELECT districts.name, boiler_rooms.id, boiler_rooms.name FROM "\
+	      "districts JOIN boiler_rooms "\
+	      "ON (districts.id = boiler_rooms.district_id)"
+	cursor = yield tx.execute(sql)
+	row = cursor.fetchone()
+	districts = {}
+	while row:
+		district = row[0]
+		id = row[1]
+		name = row[2]
+		boilers = []
+		if district in districts:
+			boilers = districts[district]
+		else:
+			districts[district] = boilers
+		boilers.append({ 'id': id, 'name': name })
+		row = cursor.fetchone()
+	result = []
+	for district, boilers in sorted(districts.items(), key=lambda x: x[0]):
+		result.append({ 'title': district, 'rooms': boilers })
+	return result
+
+##
 # Get a report for the specified date.
 # @param tx   Current transaction.
 # @param date Date on which need to find a report.
@@ -34,7 +109,7 @@ boiler_room_report_cols = [
 @tornado.gen.coroutine
 def get_report_by_date(tx, date, cols):
 	sql = "SELECT {} FROM reports WHERE date = "\
-	      "STR_TO_DATE(%s, %s)".format(cols)
+	      "STR_TO_DATE(%s, %s)".format(','.format(cols))
 	params = (date, '%d.%m.%Y')
 	cursor = yield tx.execute(query=sql, params=params)
 	return cursor.fetchone()
@@ -52,6 +127,78 @@ def get_report_dates_by_year(tx, year):
 	cursor = yield tx.execute(query=sql, params=params)
 	return cursor.fetchall()
 
+##
+# Get identifiers and titles of all boiler rooms.
+#
+@tornado.gen.coroutine
+def get_boiler_room_ids_and_titles(tx):
+	sql = "SELECT boiler_rooms.id, boiler_rooms.name, districts.name "\
+	      "from boiler_rooms JOIN districts ON(districts.id = district_id)";
+	cursor = yield tx.execute(query=sql)
+	tuples = cursor.fetchall()
+	res = []
+	for t in tuples:
+		res.append({'id': t[0], 'title': "%s - %s" % (t[2], t[1])})
+	return res
+
+##
+# Get parameters of the specified boiler room alog the year.
+# @param tx      Current transaction.
+# @param id      Identifier of the boiler room.
+# @param year    Year along which need to gather parameters.
+# @param columns List of the table columns needed to fetch.
+#
+# @retval Dictionary of the following format:
+#         ...
+#         day_number: {
+#         	parameter1_of_this_day: [val1, val2, ..., val_days_count],
+#         	....
+#         	parameterN_of_this_day: [val1, val2, ..., val_days_count],
+#         },
+#         ...
+#
+@tornado.gen.coroutine
+def get_boiler_year_report(tx, id, year, columns):
+	sql = "SELECT date, {} FROM reports JOIN boiler_room_reports "\
+	      "ON(reports.id = report_id) WHERE YEAR(date) = %s AND "\
+	      "boiler_room_id = %s"\
+	      .format(",".join(columns))
+	params = (year, id)
+	cursor = yield tx.execute(query=sql, params=params)
+	data = cursor.fetchall()
+	res = {}
+	for row in data:
+		params = {}
+		date = row[0]
+		day = date.timetuple().tm_yday
+		i = 1
+		for col in columns:
+			params[col] = row[i]
+			i += 1
+		res[day] = params
+	return res
+
+##
+# Get air temperature of all days in the specified year.
+# @param year Year in which need to get air temperatures.
+# @retval Dictionary with keys as day numbers and values as
+#         temperatures.
+#
+@tornado.gen.coroutine
+def get_year_temperature(tx, year):
+	sql = "SELECT date, temp_average_air FROM reports WHERE YEAR(date) = %s"
+	params = (year, )
+	cursor = yield tx.execute(query=sql, params=params)
+	data = cursor.fetchall()
+	res = {}
+	for row in data:
+		day = row[0].timetuple().tm_yday
+		res[day] = row[1]
+	return res
+
+##
+# Delete report by the specified date.
+#
 @tornado.gen.coroutine
 def delete_report_by_date(tx, date):
 	sql = "DELETE FROM reports WHERE date = %s"
@@ -68,8 +215,8 @@ def delete_report_by_date(tx, date):
 #
 @tornado.gen.coroutine
 def get_district_by_name(tx, name, cols):
-	sql = "SELECT {} FROM districts WHERE name = %s".format(cols)
-	params = (name)
+	sql = "SELECT {} FROM districts WHERE name = %s".format(','.join(cols))
+	params = (name, )
 	cursor = yield tx.execute(query=sql, params=params)
 	return cursor.fetchone()
 
@@ -79,7 +226,7 @@ def get_district_by_name(tx, name, cols):
 @tornado.gen.coroutine
 def insert_district(tx, name):
 	sql = "INSERT INTO districts(name) VALUES (%s)"
-	params = (name)
+	params = (name, )
 	yield tx.execute(query=sql, params=params)
 
 ##
@@ -95,7 +242,7 @@ def insert_district(tx, name):
 @tornado.gen.coroutine
 def get_boiler_room_by_dist_and_name(tx, cols, dist_id, name):
 	sql = "SELECT {} FROM boiler_rooms WHERE district_id = %s AND "\
-	      "name = %s".format(cols)
+	      "name = %s".format(','.join(cols))
 	params = (dist_id, name)
 	cursor = yield tx.execute(query=sql, params=params)
 	return cursor.fetchone()
@@ -156,14 +303,14 @@ def get_html_float_to_str(src, name, precision=2):
 #
 @tornado.gen.coroutine
 def insert_boiler_room_report(tx, src, room_id, report_id):
-	sql = 'INSERT INTO boiler_room_reports '\
-	      'VALUES (NULL, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, '\
-		       '%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, '\
-		       '%s, %s, %s, %s, %s, %s)'
 	assert(room_id)
 	assert(report_id)
-	global boiler_room_report_cols
 	params = [room_id, report_id]
+	values = ['%s', '%s']
+	for i in range(len(boiler_room_report_cols)):
+		values.append('%s')
+	values = ','.join(values)
+	sql = 'INSERT INTO boiler_room_reports VALUES (NULL, {})'.format(values)
 	for col in boiler_room_report_cols:
 		params.append(get_safe_val(src, col))
 	yield tx.execute(query=sql, params=params)
@@ -275,9 +422,8 @@ def get_full_report_by_date(tx, date):
 # in all boiler rooms.
 #
 @tornado.gen.coroutine
-def get_avg_reports_by_month(tx, year, month):
-	get_avg = lambda x: 'AVG({})'.format(x)
-	avg_list = list(map(get_avg, boiler_room_report_cols))
+def get_sum_reports_by_month(tx, year, month, cols):
+	avg_list = list(['SUM({})'.format(col) for col in cols])
 	sql = 'SELECT DAY(date), {} FROM reports JOIN boiler_room_reports '\
 	      'ON(reports.id = report_id) WHERE MONTH(date) = %s and '\
 	      'YEAR(date) = %s GROUP BY date;'.format(",".join(avg_list))
@@ -290,7 +436,7 @@ def get_avg_reports_by_month(tx, year, month):
 		params = {}
 		day = row[0]
 		i = 1
-		for col in boiler_room_report_cols:
+		for col in cols:
 			params[col] = row[i]
 			i += 1
 		res[day] = params
@@ -306,10 +452,19 @@ def get_avg_reports_by_month(tx, year, month):
 #
 @tornado.gen.coroutine
 def get_user_by_email(tx, cols, email):
-	sql = "SELECT {} FROM users WHERE email = %s".format(cols)
-	params = (email)
+	sql = "SELECT {} FROM users WHERE email = %s".format(','.join(cols))
+	params = (email, )
 	cursor = yield tx.execute(query=sql, params=params)
 	return cursor.fetchone()
+
+##
+# Insert the user to the users table.
+#
+@tornado.gen.coroutine
+def insert_user(tx, email, pass_hash):
+	sql = "INSERT INTO users(email, pass_hash) VALUES (%s, %s)"
+	params = (email, pass_hash)
+	yield tx.execute(query=sql, params=params)
 
 ##
 # Insert the user to the users table.
@@ -335,7 +490,8 @@ def get_all_users(tx, cols):
 	users = []
 	next_row = cursor.fetchone()
 	while next_row:
-		users.append((next_row[0], next_row[1], next_row[2]))
+		users.append([next_row[0], next_row[1], \
+					 next_row[2], next_row[3]])
 		next_row = cursor.fetchone()
 
 	return users
