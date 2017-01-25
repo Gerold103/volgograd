@@ -114,6 +114,7 @@
 		}
 	</script>
 
+<form id="user_form" method="POST" action="/users_management?action=add">
 	<!-- modal for adding and editing -->
 	<div class="modal fade" id="modal_form" role="dialog">
 		<div class="modal-dialog">
@@ -121,10 +122,10 @@
 			<div class="modal-content">
 				<div class="modal-header">
 					<button type="button" class="close" data-dismiss="modal">&times;</button>
-					<h4 class="modal-title">Редактирование пользователя</h4>
+					<h4 class="modal-title" id="modal_header"></h4>
 				</div>
 				<div class="modal-body">
-					<form id="user_form" method="POST">
+					
 
 						<!-- form NAME -->
 						<div class="form-group col-md-12" style="float: none">
@@ -135,7 +136,7 @@
 								<span class="input-group-addon">
 									<i class="glyphicon glyphicon-user"></i>
 								</span>
-								<input type="text" class="form-control" id="name_new_user" name="name" placeholder="Имя" pattern="^[A-Za-zА-Яа-яЁё0-9]+(?:[ _-][A-Za-zА-Яа-яЁё0-9]+)*$" required>
+								<input type="text" class="form-control" id="name_new_user" name="name" placeholder="Имя" pattern="^[A-Za-zА-Яа-яЁё0-9]+(?:[ _-][A-Za-zА-Яа-яЁё0-9]+)*$" required autofocus>
 							</div>
 						</div>
 
@@ -211,12 +212,12 @@
 							</table>
 						</div>
 
-					</form>
+					<!-- </form> -->
 					<script>
 						var name_input = document.getElementById("name_new_user");
 
 						MAX_NAME_LENGTH = 65535;
-						function ValidateName(){
+						function validate_name(){
 							var value = name_input.value;
 							var pattern = new RegExp(name_input.pattern);
 							if (value.length > MAX_NAME_LENGTH) {
@@ -230,14 +231,14 @@
 							}
 						}
 
-						name_input.onkeyup = ValidateName;
+						name_input.onkeyup = validate_name;
 
 					</script>
 					<script>
 						var password = document.getElementById("password_new_user");
 						var confirm_password = document.getElementById("confirm_password_new_user");
 
-						function ValidatePassword(){
+						function validate_password(){
 							if(password.value != confirm_password.value) {
 								confirm_password.setCustomValidity("Пароли не совпадают!");
 							} else {
@@ -245,113 +246,99 @@
 							}
 						}
 
-						password.onchange = ValidatePassword;
-						confirm_password.onkeyup = ValidatePassword;
-
-					</script>
-					<script>
-						$('#test2').click(function() {
-							$('input[type=checkbox]').each(function () {
-								if($(this).is(':checked')) {
-									$(this).siblings().prop('disabled', true);
-								}
-							})
-							return false;
-						});
+						password.onchange = validate_password;
+						confirm_password.onkeyup = validate_password;
 					</script>
 				</div>
 				<div class="modal-footer">
 					<button type="button" class="btn btn-default" data-dismiss="modal">Отменить</button>
-					<button type="button" class="btn btn-default" data-dismiss="modal" id="submit_button">
-
-					</button>
-					<script>
-						function add_user() {
-							var url = "/users_management?action=add";
-							$('#user_form').prop('action', url)
-							$('#name').val('name');
-							$('#email').val('email');
-							$('#user_form').submit();
-						}
-
-						function edit_user(event) {
-							var url = "/users_management?action=edit&id=" + event.data.user_id;
-							$('#user_form').prop('action', url)
-							$('#user_form').submit();
-						}
-
-						function click_button_add() {
-							$('#submit_button').text('Добавить');
-							$('#old_password_edit').hide();
-							$('#password_new_user').prop('required', true);
-							$('#confirm_password_new_user').prop('required', true);
-
-							set_user_data('', '', 0);
-							$('#submit_button').on('click', add_user);
-						}
-
-						function click_button_edit() {
-							$('#submit_button').text('Сохранить');
-							$('#old_password_edit').show();
-							$('#password_new_user').prop('required', false);
-							$('#confirm_password_new_user').prop('required', false);
-
-							user_id = $('#users_table')
-									   .find('.bg-primary')
-									   .attr('data-user-id');
-
-							if (!user_id) {
-								return;
-							}
-
-							fill_inputs_form(user_id);
-
-							$('#submit_button').on('click', { 
-								user_id: user_id
-							}, edit_user);
-						}
-
-						function fill_inputs_form(user_id) {
-							var name = '';
-							var email = '';
-							var rights = 0;
-							if (user_id) {
-								var users = {% raw users %};
-								var user = find_by_id(users, user_id);
-								if (user) {
-									name   = user[1];
-									email  = user[2];
-									rights = user[3];
-								}
-							}
-
-							set_user_data(name, email, rights);
-						}
-
-						function set_user_data(name, email, rights) {
-							$('#name_new_user').val(name);
-							$('#email_new_user').val(email);
-
-							{% for i, p in enumerate(pers) %}
-								var value = Boolean({{ pers[p][0] }} & rights);
-								$('#{{ p }}_showen').prop('checked', value);
-							{% end %}
-						}
-
-						function find_by_id(arr, elem) {
-							for (var i = 0; i < arr.length; i++) {
-								if (arr[i][0].toString() === elem) {
-									return arr[i];
-								}
-							}
-							return null;
-						}
-					</script>
+					<button type="submit" class="btn btn-default" id="submit_button"></button>
 				</div>
 			</div>
 
 		</div>
 	</div>
+	</form>
+	<script>
+		function add_user() {
+			var url = "/users_management?action=add";
+			$('#user_form').prop('action', url);
+		}
+
+		function edit_user(event) {
+			var url = "/users_management?action=edit&id=" + event.data.user_id;
+			$('#user_form').prop('action', url)
+		}
+
+			function click_button_add() {
+				$('#submit_button').text('Добавить');
+				$('#modal_header').text('Добавление пользователя');
+				$('#old_password_edit').hide();
+				$('#password_new_user').prop('required', true);
+				$('#confirm_password_new_user').prop('required', true);
+
+				set_user_data('', '', 0);
+				$('#user_form').on('submit', add_user);
+			}
+
+			function click_button_edit() {
+				$('#submit_button').text('Сохранить');
+				$('#modal_header').text('Редактирование пользователя');
+				$('#old_password_edit').show();
+				$('#password_new_user').prop('required', false);
+				$('#confirm_password_new_user').prop('required', false);
+
+				user_id = $('#users_table')
+				.find('.bg-primary')
+				.attr('data-user-id');
+
+				if (!user_id) {
+					return;
+				}
+
+				fill_inputs_form(user_id);
+
+				$('#user_form').on('submit', {
+					user_id:user_id
+				}, edit_user);
+			}
+
+			function fill_inputs_form(user_id) {
+				var name = '';
+				var email = '';
+				var rights = 0;
+				if (user_id) {
+					var users = {% raw users %};
+					var user = find_by_id(users, user_id);
+					if (user) {
+						name   = user[1];
+						email  = user[2];
+						rights = user[3];
+					}
+				}
+
+				set_user_data(name, email, rights);
+			}
+
+			function set_user_data(name, email, rights) {
+				$('#name_new_user').val(name);
+				$('#email_new_user').val(email);
+
+				{% for i, p in enumerate(pers) %}
+				var value = Boolean({{ pers[p][0] }} & rights);
+				$('#{{ p }}_showen').prop('checked', value);
+				{% end %}
+			}
+
+			function find_by_id(arr, elem) {
+				for (var i = 0; i < arr.length; i++) {
+					if (arr[i][0].toString() === elem) {
+						return arr[i];
+					}
+				}
+				return null;
+			}
+		</script>
 
 	<!-- select the row of a table-->
 	<script>

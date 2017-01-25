@@ -34,7 +34,7 @@ class UsersHandler(BaseHandler):
 			if user_id == current_user['user_id'].decode('utf-8'):
 				self.rollback_error(tx, e_hdr=ERR_500,
 					    e_msg='Вы не можете удалить себя')
-				return
+				return False
 
 			# delete the user by id
 			yield delete_user_by_id(tx, user_id)
@@ -43,9 +43,10 @@ class UsersHandler(BaseHandler):
 					    e_msg='На сервере произошла '\
 						  'ошибка, обратитесь к '\
 						  'администратору')
-			return
+			return False
+
 		tx.commit()
-		return 1
+		return True
 
 	@tornado.gen.coroutine
 	def edit_user(self, user_id):
@@ -65,7 +66,7 @@ class UsersHandler(BaseHandler):
 						    e_msg='Пользователь с '\
 						    	  'таким id не '\
 						    	  'зарегистрирован')
-				return
+				return False
 
 			# get changed name of user
 			name = self.get_argument('name', None)
@@ -73,7 +74,7 @@ class UsersHandler(BaseHandler):
 				# user's name was changed to an empty string
 				self.render_error(e_hdr=ERR_EDIT,
 							  	  e_msg='Не указано имя пользователя')
-				return
+				return False
 
 			# if user's name was changed
 			if user[4] != name:
@@ -86,14 +87,27 @@ class UsersHandler(BaseHandler):
 				# user's email was changed to an empty string
 				self.render_error(e_hdr=ERR_EDIT,
 							  	  e_msg='Не указана почта пользователя')
-				return
+				return False
+
+			# validate name of user
+			if len(name) > MAX_NAME_LENGTH or \
+					not re.match(NAME_PATTERN, name):
+				self.render_error(e_hdr=ERR_INSERT,
+							  e_msg='Имя не удовлетворяет заданным ограничениям')
+				return False
+
+			# validate email of user
+			if not re.match(EMAIL_PATTERN, email):
+				self.render_error(e_hdr=ERR_INSERT,
+							  e_msg='Email не удовлетворяет заданным ограничениям')
+				return False
 
 			# checking that the user with that email already exists in the db
 			duplicate_user = yield get_user_by_email(tx, ['id'], email)
 			if duplicate_user and int(user_id) != duplicate_user[0]:
 				self.render_error(e_hdr=ERR_INSERT,\
 				e_msg='Пользователь с таким email уже существует')
-				return
+				return False
 
 			# if user's email was changed
 			if user[0] != email:
@@ -123,7 +137,7 @@ class UsersHandler(BaseHandler):
 					# no, it is not! password wrong, render error page
 					self.rollback_error(tx, e_hdr=ERR_EDIT,
 						    e_msg='Неправильный пароль')
-					return
+					return False
 				# yes, it is! password is correct
 
 				# validate that the password and confirm_password match
@@ -141,7 +155,7 @@ class UsersHandler(BaseHandler):
 						self.rollback_error(tx, e_hdr=ERR_EDIT,
 									  		e_msg='Введенные \
 									  		пароли не совпадают')
-						return
+						return False
 					# if they are matching
 
 					# generate new hash password and salt
@@ -177,9 +191,10 @@ class UsersHandler(BaseHandler):
 					    e_msg='На сервере произошла '\
 						  'ошибка, обратитесь к '\
 						  'администратору')
-			return
+			return False
+
 		tx.commit()
-		return 1
+		return True
 
 	@tornado.gen.coroutine
 	def add_user(self):
@@ -201,7 +216,7 @@ class UsersHandler(BaseHandler):
 				# then rendering an error page
 				self.render_error(e_hdr=ERR_INSERT,
 						  e_msg=args_name[key])
-				return
+				return False
 			# else take first value (and the only)
 			user_data[key] = user_data[key][0]
 		
@@ -210,13 +225,13 @@ class UsersHandler(BaseHandler):
 				not re.match(NAME_PATTERN, user_data['name']):
 			self.render_error(e_hdr=ERR_INSERT,
 						  e_msg='Имя не удовлетворяет заданным ограничениям')
-			return
+			return False
 
 		# validate email of user
 		if not re.match(EMAIL_PATTERN, user_data['email']):
 			self.render_error(e_hdr=ERR_INSERT,
 						  e_msg='Email не удовлетворяет заданным ограничениям')
-			return
+			return False
 
 		# generate int rights by list of a True/False
 		user_perm_int = 0
@@ -237,13 +252,13 @@ class UsersHandler(BaseHandler):
 		   not user_data['confirm_password']:
 			self.render_error(e_hdr=ERR_INSERT,
 						  e_msg='Пароль не может быть пустым')
-			return
+			return False
 
 		# validate that the passwords match
 		if user_data['password'] != user_data['confirm_password']:
 			self.render_error(e_hdr=ERR_INSERT,
 						  e_msg='Пароли не совпадают')
-			return
+			return False
 
 		# confirm password is no longer needed
 		user_data.pop('confirm_password', None)
@@ -261,7 +276,7 @@ class UsersHandler(BaseHandler):
 			if duplicate_user:
 				self.render_error(e_hdr=ERR_INSERT,\
 				e_msg='Пользователь с таким email уже существует')
-				return
+				return False
 
 			# insert the user into db
 			yield insert_full_user(tx, user_data)
@@ -272,7 +287,7 @@ class UsersHandler(BaseHandler):
 		else:
 			yield tx.commit()
 
-		return 1
+		return True
 
 	@tornado.web.authenticated
 	@tornado.gen.coroutine
@@ -344,7 +359,7 @@ class UsersHandler(BaseHandler):
 		if not user_id and action in ['del', 'edit']:
 			return
 
-		succes = 0
+		succes = False
 		if action == 'del':
 			succes = yield self.delete_user(user_id)
 		elif action == 'edit':
