@@ -6,7 +6,8 @@
 	<div class="container-fluid report_title">
 		<h1>Сводные данные о работе котельных  МУП "Волгоградское коммунальное хозяйство"</h1>
 		<span class="date">
-			<span class="glyphicon glyphicon-calendar" aria-hidden="true"></span> {{ date }}
+			<span class="glyphicon glyphicon-calendar" aria-hidden="true"></span>
+			{{ get_date(date.year, date.month, date.day) }}
 		</span>
 	</div>
 	{% if forecast_date %}
@@ -16,7 +17,10 @@
 					<table class="table">
 						<tbody>
 							<tr>
-								<td>Прогноз на <u><a href="/show_table?date={{ forecast_date }}">{{ forecast_date }}</a></u></td>
+								{% set fdate = get_date(forecast_date.year,
+											forecast_date.month,
+											forecast_date.day) %}
+								<td>Прогноз на <u><a href="/show_table?date={{ fdate }}">{{ fdate }}</a></u></td>
 								<td>{{ forecast_weather }} {{ forecast_direction }}</td>
 								<td>T<sub>день</sub> = {{ forecast_temp_day_from }} ~ {{ forecast_temp_day_to }} C<sup>o</sup></td>
 								<td>T<sub>ночь</sub> = {{ forecast_temp_night_from }} ~ {{ forecast_temp_night_to }} C<sup>o</sup></td>

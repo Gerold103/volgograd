@@ -5,7 +5,9 @@
 {% block body %}
 
 <div class="container-fluid" id="parent">
-	<h2 class="col-md-12" style="margin:20px 0">Управление пользователями</h2>
+	<h2 class="col-md-12" style="margin:20px 0">
+		Управление пользователями
+	</h2>
 	<!-- if the user has made action (delete, edit, add) -->
 	{% if suc_msg %}
 		<script>
@@ -34,18 +36,23 @@
 			</thead>
 			<tbody>
 				{% for i, user in enumerate(users) %}
-					<tr class="um-clickable-row" data-toggle="collapse" data-target="#row_details_{{ i }}" class="accordion-toggle" data-user-id="{{ user[0] }}">
+					<tr class="um-clickable-row" data-toggle="collapse" 
+					    data-target="#row_details_{{ i }}" class="accordion-toggle" 
+					    data-user-id="{{ user[0] }}">
 						<td>{{ i+1 + num_in_page*(page-1) }}</td>
 						<td class="long_text"><span>{{ user[1] }}</span></td>
 						<td class="long_text"><span>{{ user[2] }}</span></td>
 						<td>
-							<a id="popover_rights_{{ user[0] }}" tabindex="0" class="btn btn-lg btn-info btn-sm" role="button" data-trigger="hover" style="width: 100px">
-							Права <span class="badge">{{ user[3] }}</span>
+							<a id="popover_rights_{{ user[0] }}" tabindex="0" 
+							   class="btn btn-lg btn-info btn-sm" role="button" 
+							   data-trigger="hover" style="width: 100px">
+								Права <span class="badge">{{ user[3] }}</span>
 							</a>
 						</td>
 					</tr>
 					<!-- bootstrap popover with rights -->
-					<div id='rights_content_{{ user[0] }}' style="display: none; color: #333; text-decoration: none;">
+					<div id='rights_content_{{ user[0] }}' 
+					     style="display: none; color: #333; text-decoration: none;">
 						{% set no_rights = True %}
 						{% for index, key in enumerate(pers) %}
 							{% if int(user[3]) & pers[key][0] %}
@@ -64,7 +71,8 @@
 					</div>
 					<script>
 						// alternative color for rights in popover
-						$('.alt_back_div:odd').removeClass('bg-info').addClass('bg-warning');
+						$('.alt_back_div:odd').removeClass('bg-info')
+								      .addClass('bg-warning');
 
 						$(function(){
 							// Enables popover
@@ -83,20 +91,25 @@
 		<!-- PAGINATOR -->
 		<ul class="pagination">
 			<li class="page-item {% if page == 1 %} disabled {% end %}">
-				<a class="page-link" onclick="prev_button_click(this)" id="prev_link" {% if page == 1 %} disabled {% end %}>Назад</a>
+				<a class="page-link" onclick="prev_button_click(this)" 
+				   id="prev_link" {% if page == 1 %} disabled {% end %}>
+				   Назад
+				</a>
 			</li>
-		</li>
-		{% for i in range(num_of_pages) %}
-		{% if i+1 == page %}
-		<li class="page-item active">
-			{% else %}
-			<li class="page-item">
+			{% for i in range(num_of_pages) %}
+				{% if i+1 == page %}
+					<li class="page-item active">
+				{% else %}
+					<li class="page-item">
 				{% end %}
 				<a class="page-link" href="/users_management?page={{ i+1 }}">{{ i+1 }}</a>
-			</li>
+				</li>
 			{% end %}
 			<li class="page-item {% if page == num_of_pages %} disabled {% end %}">
-				<a class="page-link" onclick="next_button_click(this)" id="next_link" {% if page == num_of_pages %} disabled {% end %}>Вперед</a>
+				<a class="page-link" onclick="next_button_click(this)" id="next_link" 
+				{% if page == num_of_pages %} disabled {% end %}>
+					Вперед
+				</a>
 			</li>
 		</ul>
 	</div>
@@ -105,14 +118,25 @@
 	{% set enable_edit = current_user['rights'] & pers['can_edit_users'][0] %}
 	{% if enable_edit %}
 	<div class="col-md-2">
-		<a href="#" onclick="click_button_add()" class="btn btn-lg btn-block btn-success" data-toggle="modal" data-target="#modal_form">Добавить</a>
-		<a href="#" onclick="delete_user()" class="btn btn-lg btn-block btn-danger user_selected" disabled>Удалить</a>
-		<a href="#" onclick="click_button_edit()" class="btn btn-lg btn-block btn-warning user_selected" data-toggle="modal" data-target="#modal_form" disabled>Редактировать</a>
+		<a href="#" onclick="click_button_add()" class="btn btn-lg btn-block btn-success" 
+		   data-toggle="modal" data-target="#modal_form">
+		   	Добавить
+		</a>
+		<a href="#" onclick="delete_user()" class="btn btn-lg btn-block btn-danger user_selected" 
+		   disabled>
+		   	Удалить
+		</a>
+		<a href="#" onclick="click_button_edit()" class="btn btn-lg btn-block btn-warning user_selected" 
+		   data-toggle="modal" data-target="#modal_form" disabled>
+			Редактировать
+		</a>
 	</div>
 	{% end %}
 
 	<!-- the hidden form for deleting a user -->
-	<form style="display: hidden" action="/users_management?page={{ page -	int(not (len(users)-1) % num_in_page) }}" method="POST" id="user_form_delete">
+	<form style="display: hidden" 
+	      action="/users_management?page={{ page -	int(not (len(users)-1) % num_in_page) }}" 
+	      method="POST" id="user_form_delete">
 		<input type="hidden" id="action" name="action"/>
 		<input type="hidden" id="id" name="id"/>
 	</form>
@@ -157,7 +181,10 @@
 								<span class="input-group-addon">
 									<i class="glyphicon glyphicon-user"></i>
 								</span>
-								<input type="text" class="form-control" id="name_user" name="name" placeholder="Имя" pattern="^[A-Za-zА-Яа-яЁё0-9]+(?:[ _-][A-Za-zА-Яа-яЁё0-9]+)*$" required autofocus>
+								<input type="text" class="form-control" id="name_user" 
+								       name="name" placeholder="Имя" 
+								       
+								        autofocus>
 							</div>
 						</div>
 
@@ -170,33 +197,36 @@
 								<span class="input-group-addon" role="input">
 									<i class="glyphicon glyphicon-envelope"></i>
 								</span>
-								<input type="email" class="form-control" id="email_user" name="email" placeholder="Email" required>
+								<input type="email" class="form-control" id="email_user" 
+								       name="email" placeholder="Email" >
 							</div>
 						</div>
 
-						<!-- form OLD PASSWORD for editing-->
-						<div class="form-group col-md-12" id="old_password_edit" style="float: none">
-							<label class="control-label" for="old_password_user">
+						<!-- form PASSWORD for editing-->
+						<div class="form-group col-md-12" id="password_edit" style="float: none">
+							<label class="control-label" for="password_user">
 								Старый пароль
 							</label>
 							<div class="input-group col-md-12">
 								<span class="input-group-addon">
 									<i class="glyphicon glyphicon-lock"></i>
 								</span>
-								<input type="password" class="form-control" id="old_password_user" name="old_password" placeholder="Старый пароль">
+								<input type="password" class="form-control" id="password_user" 
+								       name="password" placeholder="Старый пароль">
 							</div>
 						</div>
 
-						<!-- form PASSWORD -->
+						<!-- form NEW PASSWORD -->
 						<div class="form-group col-md-12" style="float: none">
-							<label class="control-label" for="password_user">
+							<label class="control-label" for="new_password_user">
 								Пароль
 							</label>
 							<div class="input-group col-md-12">
 								<span class="input-group-addon">
 									<i class="glyphicon glyphicon-lock"></i>
 								</span>
-								<input type="password" class="form-control" id="password_user" name="password" placeholder="Пароль">
+								<input type="password" class="form-control" id="new_password_user" 
+								       name="new_password" placeholder="Пароль">
 							</div>
 						</div>
 
@@ -209,7 +239,8 @@
 								<span class="input-group-addon">
 									<i class="glyphicon glyphicon-lock"></i>
 								</span>
-								<input type="password" class="form-control" id="confirm_password_user" name="confirm_password" placeholder="Повторите пароль">
+								<input type="password" class="form-control" id="confirm_password_user" 
+								       name="confirm_password" placeholder="Повторите пароль">
 							</div>
 						</div>
 
@@ -220,8 +251,11 @@
 									{% for index, key in enumerate(pers) %}
 									<td><div class="checkbox">
 										<label>
-											<input type="hidden" id="{{ key }}_hidden" name="{{ key }}" value="False">
-											<input type="checkbox" id="{{ key }}_showen" name="{{ key }}" value="True">{{ pers[key][1] }}
+											<input type="hidden" id="{{ key }}_hidden" 
+											       name="{{ key }}" value="False">
+											<input type="checkbox" id="{{ key }}_showen" 
+											       name="{{ key }}" value="True">
+											       {{ pers[key][1] }}
 										</label>
 									</div></td>
 									{% if index % 2 %}
@@ -233,7 +267,7 @@
 							</table>
 						</div>
 
-						<script>
+						<!-- <script>
 							var name_input = document.getElementById("name_user");
 
 							// set custom validate errors for 'name' input
@@ -244,7 +278,7 @@
 									name_input.setCustomValidity("Длина поля должна быть меньше " + max_name_length + "!");
 								} 
 								else if (!pattern.test(value)) {
-									name_input.setCustomValidity("Имя может состоять из латинских букв, русских букв, цифр, пробела, нижнего подчеркивания и тире, причем начинаться должно с буквы или цифры!");
+									name_input.setCustomValidity("Имя может состоять из латинских букв, русских букв, цифр, пробела, нижнего подчеркивания и тире, причем начинаться и заканчиваться должно с буквы или цифры!");
 								}
 								else {
 									name_input.setCustomValidity('');
@@ -255,25 +289,31 @@
 
 						</script>
 						<script>
-							var password = document.getElementById("password_user");
+							var new_password = document.getElementById("new_password_user");
 							var confirm_password = document.getElementById("confirm_password_user");
 
 							// set custom validate errors for 'email' input
 							function validate_password(){
-								if(password.value != confirm_password.value) {
+								if(new_password.value != confirm_password.value) {
 									confirm_password.setCustomValidity("Пароли не совпадают!");
 								} else {
 									confirm_password.setCustomValidity('');
 								}
 							}
 
-							password.onchange = validate_password;
+							new_password.onchange = validate_password;
 							confirm_password.onkeyup = validate_password;
-						</script>
+						</script> -->
 					</div>
 					<div class="modal-footer">
-						<button type="button" class="btn btn-default" data-dismiss="modal">Отменить</button>
-						<button type="submit" class="btn btn-default" id="submit_button"></button>
+						<button type="button" class="btn btn-default" 
+							data-dismiss="modal">
+							Отменить
+						</button>
+						<button type="submit" class="btn btn-default" 
+							id="submit_button">
+							
+						</button>
 					</div>
 				</div>
 
@@ -285,7 +325,7 @@
 
 		// submit button click for add a user
 		function add_user() {
-			var url = "/users_management?action=add&page={{ num_of_pages + 	int(not len(users) % num_in_page) }}";
+			var url = "/users_management?action=add&page={{ page + 	int(not len(users) % num_in_page) }}";
 			user_form.action = url;
 		}
 
@@ -299,9 +339,9 @@
 		function click_button_add() {
 			document.getElementById('submit_button').innerText = 'Добавить';
 			document.getElementById('modal_header').innerText = 'Добавление пользователя';
-			document.getElementById('old_password_edit').style.display = 'none';
-			document.getElementById('password_user').required = true;
-			document.getElementById('confirm_password_user').required = true;
+			document.getElementById('password_edit').style.display = 'none';
+			// document.getElementById('new_password_user').required = true;
+			// document.getElementById('confirm_password_user').required = true;
 
 			set_user_data('', '', 0);
 			user_form.addEventListener('submit', add_user);
@@ -311,8 +351,8 @@
 		function click_button_edit() {
 			document.getElementById('submit_button').innerText = 'Сохранить';
 			document.getElementById('modal_header').innerText = 'Редактирование пользователя';
-			document.getElementById('old_password_edit').style.display = 'block';
-			document.getElementById('password_user').required = false;
+			document.getElementById('password_edit').style.display = 'block';
+			document.getElementById('new_password_user').required = false;
 			document.getElementById('confirm_password_user').required = false;
 
 			user_id = $('#users_table').find('.bg-primary').attr('data-user-id');
@@ -395,6 +435,7 @@
 				!$(event.target).hasClass('user_selected')) 
 			{
 <<<<<<< HEAD
+<<<<<<< HEAD
 				unselect('.um-clickable-row');
 			}
 		});
@@ -409,6 +450,11 @@
 			xhr.send();
 		}
 >>>>>>> Users management
+=======
+				unselect('.um-clickable-row');
+			}
+		});
+>>>>>>> All the tests implemented for /users_management
 	</script>
 
 	<!-- generate a href for NEXT and PREV button -->
