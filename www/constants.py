@@ -30,7 +30,7 @@ permissions = {\
 		'can_see_reports': [CAN_SEE_REPORTS, 'Просмотр отчетов'],\
 		'can_delete_reports': [CAN_DELETE_REPORTS, 'Удаление отчетов'],\
 		'can_see_users': [CAN_SEE_USERS, 'Просмотр пользователей'],\
-		'can_edit_users': [CAN_EDIT_USERS, 'Добавление и редактирование пользователей']}
+		'can_edit_users': [CAN_EDIT_USERS, 'Редактирование пользователей']}
 
 NAME_PATTERN = '^[A-Za-zА-Яа-яЁё0-9]+(?:[ _-][A-Za-zА-Яа-яЁё0-9]+)*$'
 MAX_NAME_LENGTH = 65535

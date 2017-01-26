@@ -176,15 +176,6 @@ h1 {
     background-color: #428bca;
 }
 
-.row_details {
-	border-left: solid 1px lightgrey;
-	border-bottom: solid 1px lightgrey;
-	border-right: solid 1px lightgrey;
-	border-radius: 0px 0px 5px 5px;
-	margin: 0 0 5px 30px;
-	padding: 0px 10px;
-}
-
 .table-hover > tbody > tr.no-hover:hover,
 .table-hover > tbody > tr.no-hover:hover {
     background-color: inherit;

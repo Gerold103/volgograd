@@ -22,41 +22,52 @@
 		<table class="table table-hover" id="users_table">
 			<thead>
 				<tr>
-					<th></th>
 					<th>№</th>
 					<th>Имя</th>
 					<th>Почта</th>
+					<th>Права</th>
 				</tr>
 			</thead>
 			<tbody>
 				{% for i in range((page-1)*num_in_page, page*num_in_page) %}
 				{% if i < len(users) %}
 				<tr class="clickable-row" data-toggle="collapse" data-target="#row_details_{{ i }}" class="accordion-toggle" data-user-id="{{ users[i][0] }}">
-					<td>    
-						<div class="input-group">
-							<span class="glyphicon glyphicon-chevron-right"></span>
-						</div>
-					</td>
 					<td>{{ i+1 }}</td>
 					<td class="long_text"><span>{{ users[i][1] }}</span></td>
 					<td class="long_text"><span>{{ users[i][2] }}</span></td>
-				</tr>
-				<tr class="no-hover">
-					<td colspan="6" class="hiddenRow" style="padding: 0; border-width: 0;" >
-						<div id="row_details_{{ i }}" class="accordian-body collapse row_details">
-							<ul>
-								{% for index, perm in enumerate(users[i][4]) %}
-								<li>
-									{{ perm }}<br>
-								</li>
-								{% end %}
-							</ul>
-							{% if len(users[i][4]) == 0 %}
-							Нет прав на данном сайте
-							{% end %%}
-						</div>
+					<td>
+						<a id="popover_rights_{{ users[i][0] }}" tabindex="0" class="btn btn-lg btn-info btn-sm" role="button" data-trigger="hover">
+						Права <span class="badge">{{ len(users[i][4]) }}</span>
+						</a>
 					</td>
 				</tr>
+				<div id='rights_content_{{ users[i][0] }}' style="display: none">
+					{% for index, perm in enumerate(users[i][4]) %}
+						<div class="alt_back_div bg-info" style="padding: 3px;">
+							{{ perm }}
+						</div>
+						{% if index != len(users[i][4])-1 %}
+							<hr style="margin: 1px">
+						{% end %}
+					{% end %}
+					{% if len(users[i][4]) == 0 %}
+						Нет прав на данном сайте
+					{% end %}
+				</div>
+				<script>
+					$('.alt_back_div:odd').removeClass('bg-info').addClass('bg-warning');
+				</script>
+				<script>
+					$(function(){
+						// Enables popover
+						$("#popover_rights_{{ users[i][0] }}").popover({
+							html : true, 
+							content: function() {
+								return $("#rights_content_{{ users[i][0] }}").html();
+							}
+						});
+					});
+				</script>
 				{% end %}
 				{% end %}
 			</tbody>
@@ -113,16 +124,6 @@
 			$('#action').val('del');
 			$('#id').val(user_id);
 			$("#user_form_delete").submit();
-		}
-	</script>
-
-	<!-- change a glyphicon when permissions are shown (hidden) -->
-	<script>
-		$('div.collapse').on('show.bs.collapse', ChangeGlyphicon);
-		$('div.collapse').on('hide.bs.collapse', ChangeGlyphicon);
-
-		function ChangeGlyphicon() {
-			$(this).parent().parent().prev().find('.glyphicon').toggleClass('glyphicon-chevron-right').toggleClass('glyphicon-chevron-down');
 		}
 	</script>
 
@@ -369,6 +370,14 @@
 			} else {
 				$(this).addClass('bg-primary').siblings().removeClass('bg-primary');
 				$('.user_selected').removeAttr('disabled').off('click');
+			}
+		});
+
+		$(document).on('click', function(event) {
+			if (!$(event.target).closest('#users_table').length &&
+				!$(event.target).hasClass('user_selected')) 
+			{
+				$('.clickable-row').removeClass('bg-primary');
 			}
 		});
 	</script>
