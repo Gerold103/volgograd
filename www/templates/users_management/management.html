@@ -4,71 +4,78 @@
 
 {% block body %}
 
-<div class="container-fluid">
+<div class="container-fluid" id="parent">
 	<h2 class="col-md-12" style="margin:20px 0">Управление пользователями</h2>
+	<!-- if the user has made action (delete, edit, add) -->
 	{% if suc_msg %}
-		<div class="col-md-12 alert alert-success" role="alert" id="suc_msg"></div>
 		<script>
 			suc_act_msg = {
 				'del' : 'Пользователь успешно удален',
 				'edit': 'Пользователь успешно отредактирован',
 				'add' : 'Пользователь успешно добавлен'
 			};
-			var bold_text = suc_act_msg['{{ suc_msg }}'];
-			$('#suc_msg').text(bold_text).css("font-weight","Bold");;
+
+			var msg_text = suc_act_msg['{{ suc_msg }}'];
+			if (msg_text) 
+				$('#parent').append('<div class="col-md-12 alert alert-success" role="alert" id="suc_msg"></div>')
+				$('#suc_msg').text(msg_text).css("font-weight","Bold");
 		</script>
 	{% end %}
 	<div class="col-md-8">
+		<!-- table of the users -->
 		<table class="table table-hover" id="users_table">
 			<thead>
 				<tr>
 					<th>№</th>
 					<th>Имя</th>
 					<th>Почта</th>
-					<th>Права</th>
+					<th></th>
 				</tr>
 			</thead>
 			<tbody>
-				{% for i in range((page-1)*num_in_page, page*num_in_page) %}
-				{% if i < len(users) %}
-				<tr class="clickable-row" data-toggle="collapse" data-target="#row_details_{{ i }}" class="accordion-toggle" data-user-id="{{ users[i][0] }}">
-					<td>{{ i+1 }}</td>
-					<td class="long_text"><span>{{ users[i][1] }}</span></td>
-					<td class="long_text"><span>{{ users[i][2] }}</span></td>
-					<td>
-						<a id="popover_rights_{{ users[i][0] }}" tabindex="0" class="btn btn-lg btn-info btn-sm" role="button" data-trigger="hover">
-						Права <span class="badge">{{ len(users[i][4]) }}</span>
-						</a>
-					</td>
-				</tr>
-				<div id='rights_content_{{ users[i][0] }}' style="display: none">
-					{% for index, perm in enumerate(users[i][4]) %}
-						<div class="alt_back_div bg-info" style="padding: 3px;">
-							{{ perm }}
-						</div>
-						{% if index != len(users[i][4])-1 %}
-							<hr style="margin: 1px">
+				{% for i, user in enumerate(users) %}
+					<tr class="clickable-row" data-toggle="collapse" data-target="#row_details_{{ i }}" class="accordion-toggle" data-user-id="{{ user[0] }}">
+						<td>{{ i+1 + num_in_page*(page-1) }}</td>
+						<td class="long_text"><span>{{ user[1] }}</span></td>
+						<td class="long_text"><span>{{ user[2] }}</span></td>
+						<td>
+							<a id="popover_rights_{{ user[0] }}" tabindex="0" class="btn btn-lg btn-info btn-sm" role="button" data-trigger="hover" style="width: 100px">
+							Права <span class="badge">{{ user[3] }}</span>
+							</a>
+						</td>
+					</tr>
+					<!-- bootstrap popover with rights -->
+					<div id='rights_content_{{ user[0] }}' style="display: none; color: #333; text-decoration: none;">
+						{% set no_rights = True %}
+						{% for index, key in enumerate(pers) %}
+							{% if int(user[3]) & pers[key][0] %}
+								{% set no_rights = False %}
+								<div class="alt_back_div bg-info" style="padding: 3px;">
+									{{ pers[key][1] }}
+								</div>
+								{% if index != len(pers)-1 %}
+									<hr style="margin: 1px">
+								{% end %}	
+							{% end %}
 						{% end %}
-					{% end %}
-					{% if len(users[i][4]) == 0 %}
-						Нет прав на данном сайте
-					{% end %}
-				</div>
-				<script>
-					$('.alt_back_div:odd').removeClass('bg-info').addClass('bg-warning');
-				</script>
-				<script>
-					$(function(){
-						// Enables popover
-						$("#popover_rights_{{ users[i][0] }}").popover({
-							html : true, 
-							content: function() {
-								return $("#rights_content_{{ users[i][0] }}").html();
-							}
+						{% if no_rights %}
+							Нет прав на данном сайте
+						{% end %}
+					</div>
+					<script>
+						// alternative color for rights in popover
+						$('.alt_back_div:odd').removeClass('bg-info').addClass('bg-warning');
+
+						$(function(){
+							// Enables popover
+							$("#popover_rights_{{ user[0] }}").popover({
+								html : true, 
+								content: function() {
+									return $("#rights_content_{{ user[0] }}").html();
+								}
+							});
 						});
-					});
-				</script>
-				{% end %}
+					</script>
 				{% end %}
 			</tbody>
 		</table>
@@ -76,7 +83,7 @@
 		<!-- PAGINATOR -->
 		<ul class="pagination">
 			<li class="page-item {% if page == 1 %} disabled {% end %}">
-				<a class="page-link" onclick="PrevButtonClick(this)" id="prev_link" {% if page == 1 %} disabled {% end %}>Назад</a>
+				<a class="page-link" onclick="prev_button_click(this)" id="prev_link" {% if page == 1 %} disabled {% end %}>Назад</a>
 			</li>
 		</li>
 		{% for i in range(num_of_pages) %}
@@ -89,11 +96,13 @@
 			</li>
 			{% end %}
 			<li class="page-item {% if page == num_of_pages %} disabled {% end %}">
-				<a class="page-link" onclick="NextButtonClick(this)" id="next_link" {% if page == num_of_pages %} disabled {% end %}>Вперед</a>
+				<a class="page-link" onclick="next_button_click(this)" id="next_link" {% if page == num_of_pages %} disabled {% end %}>Вперед</a>
 			</li>
 		</ul>
 	</div>
 
+	<!-- delete, edit, add buttons -->
+	{% set enable_edit = current_user['rights'] & pers['can_edit_users'][0] %}
 	{% if enable_edit %}
 	<div class="col-md-2">
 		<a href="#" onclick="click_button_add()" class="btn btn-default btn-lg btn-block btn-success" data-toggle="modal" data-target="#modal_form">Добавить</a>
@@ -102,15 +111,15 @@
 	</div>
 	{% end %}
 
-	<form style="display: hidden" action="/users_management" method="POST" id="user_form_delete">
+	<!-- the hidden form for deleting a user -->
+	<form style="display: hidden" action="/users_management?page={{ page -	int(not (len(users)-1) % num_in_page) }}" method="POST" id="user_form_delete">
 		<input type="hidden" id="action" name="action" value=""/>
 		<input type="hidden" id="id" name="id" value=""/>
 	</form>
 	<script>
+		// delete button's click handler
 		function delete_user() {
-			user_id = $('#users_table')
-			.find('.bg-primary')
-			.attr('data-user-id');
+			user_id = $('#users_table').find('.bg-primary').attr('data-user-id');
 			
 			if (!user_id) {
 				return;
@@ -121,12 +130,13 @@
 				return;
 			}
 
-			$('#action').val('del');
-			$('#id').val(user_id);
+			document.getElementById('action').value = 'del';
+			document.getElementById('id').value = user_id;
 			$("#user_form_delete").submit();
 		}
 	</script>
 
+	<!-- form for adding and deleting a users -->
 	<form id="user_form" method="POST" action="/users_management?action=add">
 		<!-- modal for adding and editing -->
 		<div class="modal fade" id="modal_form" role="dialog">
@@ -225,16 +235,15 @@
 							</table>
 						</div>
 
-						<!-- </form> -->
 						<script>
 							var name_input = document.getElementById("name_user");
 
-							MAX_NAME_LENGTH = 65535;
+							// set custom validate errors for 'name' input
 							function validate_name(){
 								var value = name_input.value;
 								var pattern = new RegExp(name_input.pattern);
-								if (value.length > MAX_NAME_LENGTH) {
-									name_input.setCustomValidity("Длина поля должна быть меньше " + MAX_NAME_LENGTH + "!");
+								if (value.length > {{ max_name_length }}) {
+									name_input.setCustomValidity("Длина поля должна быть меньше " + max_name_length + "!");
 								} 
 								else if (!pattern.test(value)) {
 									name_input.setCustomValidity("Имя может состоять из латинских букв, русских букв, цифр, пробела, нижнего подчеркивания и тире, причем начинаться должно с буквы или цифры!");
@@ -251,6 +260,7 @@
 							var password = document.getElementById("password_user");
 							var confirm_password = document.getElementById("confirm_password_user");
 
+							// set custom validate errors for 'email' input
 							function validate_password(){
 								if(password.value != confirm_password.value) {
 									confirm_password.setCustomValidity("Пароли не совпадают!");
@@ -273,37 +283,41 @@
 		</div>
 	</form>
 	<script>
+		var user_form = document.getElementById('user_form');
+
+		// submit button click for add a user
 		function add_user() {
-			var url = "/users_management?action=add";
-			$('#user_form').prop('action', url);
+			var url = "/users_management?action=add&page={{ num_of_pages + 	int(not len(users) % num_in_page) }}";
+			user_form.action = url;
 		}
 
+		// submit button click for edit a user
 		function edit_user(event) {
-			var url = "/users_management?action=edit&id=" + event.data.user_id;
-			$('#user_form').prop('action', url)
+			var url = "/users_management?action=edit&id=" + event.data.user_id + "&page={{ page }}";
+			user_form.action = url;
 		}
 
+		// click button 'add user'
 		function click_button_add() {
-			$('#submit_button').text('Добавить');
-			$('#modal_header').text('Добавление пользователя');
-			$('#old_password_edit').hide();
-			$('#password_user').prop('required', true);
-			$('#confirm_password_user').prop('required', true);
+			document.getElementById('submit_button').innerText = 'Добавить';
+			document.getElementById('modal_header').innerText = 'Добавление пользователя';
+			document.getElementById('old_password_edit').style.display = 'none';
+			document.getElementById('password_user').required = true;
+			document.getElementById('confirm_password_user').required = true;
 
 			set_user_data('', '', 0);
-			$('#user_form').on('submit', add_user);
+			user_form.addEventListener('submit', add_user);
 		}
 
+		// click button 'edit user'
 		function click_button_edit() {
-			$('#submit_button').text('Сохранить');
-			$('#modal_header').text('Редактирование пользователя');
-			$('#old_password_edit').show();
-			$('#password_user').prop('required', false);
-			$('#confirm_password_user').prop('required', false);
+			document.getElementById('submit_button').innerText = 'Сохранить';
+			document.getElementById('modal_header').innerText = 'Редактирование пользователя';
+			document.getElementById('old_password_edit').style.display = 'block';
+			document.getElementById('password_user').required = false;
+			document.getElementById('confirm_password_user').required = false;
 
-			user_id = $('#users_table')
-			.find('.bg-primary')
-			.attr('data-user-id');
+			user_id = $('#users_table').find('.bg-primary').attr('data-user-id');
 
 			if (!user_id) {
 				return;
@@ -316,6 +330,7 @@
 			}, edit_user);
 		}
 
+		// fill inputs with data from db (name, email, rights)
 		function fill_inputs_form(user_id) {
 			var name = '';
 			var email = '';
@@ -333,16 +348,18 @@
 			set_user_data(name, email, rights);
 		}
 
+		// set input's value: name, email, rights
 		function set_user_data(name, email, rights) {
-			$('#name_user').val(name);
-			$('#email_user').val(email);
+			document.getElementById('name_user').value = name;
+			document.getElementById('email_user').value = email;
 
 			{% for i, p in enumerate(pers) %}
-			var value = Boolean({{ pers[p][0] }} & rights);
-			$('#{{ p }}_showen').prop('checked', value);
+				var value = Boolean({{ pers[p][0] }} & rights);
+				$('#{{ p }}_showen').prop('checked', value);
 			{% end %}
 		}
 
+		// find elem in arr
 		function find_by_id(arr, elem) {
 			for (var i = 0; i < arr.length; i++) {
 				if (arr[i][0].toString() === elem) {
@@ -353,20 +370,22 @@
 		}
 	</script>
 
-	<!-- select the row of a table-->
+	<!-- select/unselect the row of a table-->
 	<script>
-		$('.user_selected').on("click", function() {
-			return false; 
-		});
+		function unselect(html_el) {
+			$(html_el).removeClass('bg-primary');
+
+			$('.user_selected').attr('disabled', true);
+			$('.user_selected').on("click", function() {
+				return false; 
+			});
+		}
+
+		unselect();
 
 		$('#users_table').on('click', '.clickable-row', function(event) {
 			if($(this).hasClass('bg-primary')){
-				$(this).removeClass('bg-primary');
-
-				$('.user_selected').attr('disabled', true);
-				$('.user_selected').on("click", function() {
-					return false; 
-				});
+				unselect(this);
 			} else {
 				$(this).addClass('bg-primary').siblings().removeClass('bg-primary');
 				$('.user_selected').removeAttr('disabled').off('click');
@@ -377,17 +396,17 @@
 			if (!$(event.target).closest('#users_table').length &&
 				!$(event.target).hasClass('user_selected')) 
 			{
-				$('.clickable-row').removeClass('bg-primary');
+				unselect('.clickable-row');
 			}
 		});
 	</script>
 
 	<!-- generate a href for NEXT and PREV button -->
 	<script>
-		DisabledElement("#prev_link");
-		DisabledElement("#next_link");
+		disabled_element("#prev_link");
+		disabled_element("#next_link");
 
-		function NextButtonClick(a) {
+		function next_button_click(a) {
 			current_page = parseInt($('.pagination').find('.active').text());
 
 			var href_value = '';
@@ -397,13 +416,13 @@
 			$(a).prop('href', href_value);
 		}
 
-		function PrevButtonClick(a) {
+		function prev_button_click(a) {
 			current_page = parseInt($('.pagination').find('.active').text());
 			href_value = '/users_management?page=' + (current_page-1);
 			$(a).prop('href', href_value);
 		}
 
-		function DisabledElement(id) {
+		function disabled_element(id) {
 			if ($(id).attr("disabled")) {
 				$(id).on("click", function() {
 					return false; 

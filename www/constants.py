@@ -31,11 +31,3 @@ permissions = {\
 		'can_delete_reports': [CAN_DELETE_REPORTS, 'Удаление отчетов'],\
 		'can_see_users': [CAN_SEE_USERS, 'Просмотр пользователей'],\
 		'can_edit_users': [CAN_EDIT_USERS, 'Редактирование пользователей']}
-
-NAME_PATTERN = '^[A-Za-zА-Яа-яЁё0-9]+(?:[ _-][A-Za-zА-Яа-яЁё0-9]+)*$'
-MAX_NAME_LENGTH = 65535
-
-EMAIL_PATTERN = '^[a-zA-Z0-9.!#$%&’*+/=?^_`{|}~-]+@[a-zA-Z0-9-]'\
-				'+(?:\.[a-zA-Z0-9-]+)*$'
-
-NUMBER_USERS_IN_PAGE = 8

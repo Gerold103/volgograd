@@ -483,9 +483,10 @@ def insert_user(tx, email, pass_hash):
 # @retval 
 #
 @tornado.gen.coroutine
-def get_all_users(tx, cols):
-	sql = "SELECT {} FROM users".format(cols)
-	cursor = yield tx.execute(query=sql)
+def get_all_users(tx, cols, limit, offset):
+	sql = "SELECT {} FROM users LIMIT %s OFFSET %s".format(cols)
+	params = (limit, offset)
+	cursor = yield tx.execute(query=sql, params=params)
 
 	users = []
 	next_row = cursor.fetchone()
@@ -503,11 +504,13 @@ def get_all_users(tx, cols):
 def insert_full_user(tx, src):
 	sql = "INSERT INTO users(email, password, salt, name, rights) "\
 		"VALUES (%s, %s, %s, %s, %s)"
-	params = (get_safe_val(src, 'email'),\
-			  get_safe_val(src, 'password'),\
-			  get_safe_val(src, 'salt'),\
-			  get_safe_val(src, 'name'),\
-			  get_safe_val(src, 'rights'),)
+	assert('email' in src)
+	assert('password' in src)
+	assert('salt' in src)
+	assert('name' in src)
+	assert('rights' in src)
+	params = (src['email'], src['password'], src['salt'], \
+			 src['name'], src['rights'])
 	yield tx.execute(query=sql, params=params)
 
 ##
@@ -536,12 +539,22 @@ def get_user_by_id(tx, cols, id):
 @tornado.gen.coroutine
 def update_user_by_id(tx, cols, id):
 	sql = "UPDATE users SET "
-	first = True
+	params = ()
 	for c in cols:
-		if not first:
-			sql += ","
-		first = False
-		sql += (c + "='" + str(cols[c]) + "'")
+		if len(params):
+			sql += ", "
+		sql += (c + " = %s")
+		params += (cols[c], )
 	sql += " WHERE id = %s"
-	params = (id, )
+	params += (id, )
 	yield tx.execute(query=sql, params=params)
+
+
+##
+# Get count of users
+#
+@tornado.gen.coroutine
+def get_count_users(tx):
+	sql = "SELECT COUNT(id) FROM users"
+	cursor = yield tx.execute(query=sql)
+	return cursor.fetchone()[0]

@@ -195,3 +195,7 @@ h1 {
     display: inline-block;
     max-width: 100%;
 }
+
+.popover {
+	color: #333;
+}
