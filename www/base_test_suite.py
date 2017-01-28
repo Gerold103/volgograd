@@ -5,6 +5,7 @@ import tornado.testing
 import tornado.web
 from tornado.httputil import parse_cookie, HTTPHeaders
 from tornado.web import decode_signed_value
+from tornado.httpclient import AsyncHTTPClient
 
 import secret_conf
 import application
@@ -50,6 +51,15 @@ test_users = [
 # up each test suite.
 #
 class BaseTestSuite(tornado.testing.AsyncHTTPTestCase):
+	def __init__(self, *args, **kwargs):
+		self.client = None
+		super(BaseTestSuite, self).__init__(*args, **kwargs)
+
+	def get_client(self):
+		if self.client is None:
+			self.client = AsyncHTTPClient(self.io_loop)
+		return self.client
+
 	def get_app(self):
 		return tornado.web.Application(
 			handlers=application.handlers_list,

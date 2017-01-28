@@ -106,6 +106,7 @@ class LoginHandler(BaseHandler):
 						       expires_days=1)
 			yield tx.commit()
 		except Exception as e:
+			logger.exception('Error during login')
 			self.rollback_error(tx, e_hdr=ERR_500)
 			return
 		self.redirect('/')
@@ -261,14 +262,17 @@ if __name__ == "__main__":
 	db_name = secret_conf.db_name
 	if args.test:
 		db_name = 'test_volgograd'
-	application.connect_db(max_connections=max_conn,
-			       idle_seconds=idle,
-			       wait_connection_timeout=conn_timeout,
-			       host=secret_conf.db_host,
-			       user=secret_conf.db_user,
-			       passwd=secret_conf.db_passwd,
-			       db=db_name,
-			       charset=secret_conf.db_charset)
+	application.connect_db_args = {
+		'max_connections': max_conn,
+		'idle_seconds': idle,
+		'wait_connection_timeout': conn_timeout,
+		'host': secret_conf.db_host,
+		'user': secret_conf.db_user,
+		'passwd': secret_conf.db_passwd,
+		'db': db_name,
+		'charset': secret_conf.db_charset
+	}
+	application.connect_db()
 	application.handlers_list = [
 		(r'/', MainHandler),
 		(r'/upload', UploadHandler),

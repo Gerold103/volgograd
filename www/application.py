@@ -9,6 +9,13 @@ import tornado.gen
 #
 pool = None
 #
+# connect_db_args is a hook for tests. Tornado gen.test closes
+# ioloop after each test together with db connection so in begin
+# of each test we call connect_db().
+# But arguments for the connection are initiaized in the main().
+#
+connect_db_args = {}
+#
 # Global tornado application server.
 #
 app = None
@@ -22,9 +29,9 @@ template_path = ''
 static_path = ''
 login_url = ''
 
-def connect_db(**kwargs):
+def connect_db():
 	global pool
-	pool = tormysql.helpers.ConnectionPool(**kwargs)
+	pool = tormysql.helpers.ConnectionPool(**connect_db_args)
 
 def begin():
 	assert(pool)
