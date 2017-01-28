@@ -137,8 +137,8 @@
 					var expec_params = params[expected_id];
 					var real_values = [];
 					var expec_values = [];
-					for (var day = 0;
-					     day < {{ days_count }}; ++day) {
+					for (var day = 1;
+					     day <= {{ days_count }}; ++day) {
 						if (! (day in real_params) ||
 						    real_params[day] == null)
 							real_values.push(NaN);
