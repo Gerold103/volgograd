@@ -10,7 +10,7 @@ import tornado.gen
 import application
 from query import *
 from constants import *
-from base_handler import BaseHandler
+from base_handler import BaseHandler, need_rights
 
 ##
 # Plot average values of parameters of all boiler rooms for the
@@ -18,10 +18,8 @@ from base_handler import BaseHandler
 #
 class WaterConsumHandler(BaseHandler):
 	@tornado.gen.coroutine
-	@tornado.web.authenticated
+	@need_rights(CAN_SEE_REPORTS)
 	def get(self):
-		if not self.check_rights(CAN_SEE_REPORTS):
-			return
 		#
 		# Need to specify both the year and the month.
 		#

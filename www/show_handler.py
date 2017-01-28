@@ -11,7 +11,7 @@ import tornado.gen
 
 from query import *
 from constants import *
-from base_handler import BaseHandler
+from base_handler import BaseHandler, need_rights
 
 ##
 # Choose date and show page with a report table on specified date.
@@ -21,12 +21,10 @@ class ShowHandler(BaseHandler):
 	# Render the calendar for the specified year.
 	# @param year Print calendar with all months of this year.
 	#
-	@tornado.web.authenticated
 	@tornado.gen.coroutine
+	@need_rights(CAN_SEE_REPORTS)
 	def print_calendar(self, year):
 		assert(year > 1970)
-		if not self.check_rights(CAN_SEE_REPORTS):
-			return
 		uploaded_days_raw = []
 		#
 		# Find what reports were uploaded.
@@ -118,11 +116,9 @@ class ShowHandler(BaseHandler):
 		self.render('choose_day.html', months=months,
 			    month_names=month_names, year=year)
 
-	@tornado.web.authenticated
 	@tornado.gen.coroutine
+	@need_rights(CAN_SEE_REPORTS)
 	def get(self):
-		if not self.check_rights(CAN_SEE_REPORTS):
-			return
 		#
 		# If date is not specified then choose one.
 		#

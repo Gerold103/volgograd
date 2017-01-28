@@ -13,7 +13,7 @@ import tornado.gen
 
 import secret_conf
 import application
-from base_handler         import BaseHandler
+from base_handler         import BaseHandler, need_rights
 from upload_handler       import UploadHandler
 from show_handler         import ShowHandler
 from water_consum_handler import WaterConsumHandler
@@ -125,10 +125,8 @@ class LogoutHandler(BaseHandler):
 #
 class DropHandler(BaseHandler):
 	@tornado.gen.coroutine
-	@tornado.web.authenticated
+	@need_rights(CAN_DELETE_REPORTS)
 	def get(self):
-		if not self.check_rights(CAN_DELETE_REPORTS):
-			return
 		date = self.get_argument('date', None)
 		if date is None:
 			self.render_error(e_hdr=ERR_404,

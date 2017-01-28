@@ -10,7 +10,7 @@ import tornado.gen
 import application
 from query import *
 from constants import *
-from base_handler import BaseHandler
+from base_handler import BaseHandler, need_rights
 
 ##
 # Show the plot with values of one parameter of one boiler along
@@ -18,10 +18,8 @@ from base_handler import BaseHandler
 #
 class YearPlotHandler(BaseHandler):
 	@tornado.gen.coroutine
-	@tornado.web.authenticated
+	@need_rights(CAN_SEE_REPORTS)
 	def get(self):
-		if not self.check_rights(CAN_SEE_REPORTS):
-			return
 		year = self.get_argument('year', None)
 		if year is None:
 			self.render_error(e_hdr=ERR_404, e_msg='Не указан год')

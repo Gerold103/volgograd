@@ -11,7 +11,7 @@ import tornado.gen
 
 import application
 from xml_parser import parse_xls
-from base_handler import BaseHandler
+from base_handler import BaseHandler, need_rights
 from query import *
 from constants import *
 
@@ -22,10 +22,8 @@ class UploadHandler(BaseHandler):
 	##
 	# Render the page with a form for sending a table to the server.
 	#
-	@tornado.web.authenticated
+	@need_rights(CAN_UPLOAD_REPORTS)
 	def get(self):
-		if not self.check_rights(CAN_UPLOAD_REPORTS):
-			return
 		self.render('upload_xls.html')
 
 	##
@@ -81,11 +79,9 @@ class UploadHandler(BaseHandler):
 	##
 	# Upload the report to the database.
 	#
-	@tornado.web.authenticated
 	@tornado.gen.coroutine
+	@need_rights(CAN_UPLOAD_REPORTS)
 	def post(self):
-		if not self.check_rights(CAN_UPLOAD_REPORTS):
-			return
 		if 'xls-table' not in self.request.files:
 			self.render_error(e_hdr=ERR_UPLOAD,
 					  e_msg='Не указан файл')

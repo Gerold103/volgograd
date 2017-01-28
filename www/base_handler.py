@@ -80,3 +80,16 @@ class BaseHandler(tornado.web.RequestHandler):
 						  e_msg='Доступ запрещен')
 			return False
 		return True
+
+##
+# Decorator to check rights mask.
+# @sa constants.py
+#
+def need_rights(mask, render=True):
+	def need_rights_impl(method):
+		def wrapper(self, *args, **kwargs):
+			if not self.check_rights(mask, render=render):
+				return
+			return method(self, *args, **kwargs)
+		return wrapper
+	return need_rights_impl
