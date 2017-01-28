@@ -73,8 +73,5 @@ class TemperatureHandler(BaseHandler):
 		except:
 			logger.exception('Error with getting districts and '\
 					 'boilers')
-			self.rollback_error(tx, e_hdr=ERR_500,
-					    e_msg='На сервере произошла '\
-						  'ошибка, обратитесь к '\
-						  'администратору')
+			self.rollback_error(tx, e_hdr=ERR_500)
 			return

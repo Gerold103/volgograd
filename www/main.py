@@ -106,10 +106,7 @@ class LoginHandler(BaseHandler):
 						       expires_days=1)
 			yield tx.commit()
 		except Exception as e:
-			self.rollback_error(tx, e_hdr=ERR_500,
-					    e_msg='На сервере произошла '\
-					    	  'ошибка, обратитесь к '\
-					    	  'администратору')
+			self.rollback_error(tx, e_hdr=ERR_500)
 			return
 		self.redirect('/')
 ##
@@ -139,10 +136,7 @@ class DropHandler(BaseHandler):
 			tx.commit()
 		except Exception:
 			logger.exception("Error with deleting report by date")
-			self.rollback_error(tx, e_hdr=ERR_500,
-					    e_msg='На сервере произошла '\
-						  'ошибка, обратитесь к '\
-						  'администратору')
+			self.rollback_error(tx, e_hdr=ERR_500)
 			return
 		self.redirect('/')
 

@@ -64,11 +64,7 @@ class WaterConsumHandler(BaseHandler):
 			except Exception:
 				logger.exception('Error with getting average '\
 						 'values for month reports')
-				self.rollback_error(tx, e_hdr=ERR_500,
-						    e_msg='На сервере '\
-							  'произошла ошибка, '\
-							  'обратитесь к '\
-							  'администратору')
+				self.rollback_error(tx, e_hdr=ERR_500)
 				return
 			self.render('water_consum.html', month_names=month_names,
 				    month=month, year=year,

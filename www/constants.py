@@ -12,6 +12,10 @@ ERR_UPLOAD = 'Ошибка загрузки'
 ERR_404    = 'Не найдено'
 ERR_PARAMETERS = 'Неверные параметры'
 
+ERR_MESSAGES = {
+	ERR_500: 'На сервере произошла ошибка, обратитесь к администратору'
+}
+
 CAN_UPLOAD_REPORTS = 0x01
 CAN_SEE_REPORTS = 0x02
 CAN_DELETE_REPORTS = 0x04

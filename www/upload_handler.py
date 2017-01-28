@@ -137,11 +137,6 @@ class UploadHandler(BaseHandler):
 						    	  'идентификатором уже'\
 							  ' существует')
 			else:
-				self.rollback_error(tx,
-						    e_hdr=ERR_500,
-						    e_msg='На сервере '\
-						    	  'произошла ошибка, '\
-						    	  'обратитесь к '\
-						    	  'администратору')
+				self.rollback_error(tx, e_hdr=ERR_500)
 		else:
 			yield tx.commit()

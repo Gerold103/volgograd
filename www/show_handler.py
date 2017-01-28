@@ -146,21 +146,17 @@ class ShowHandler(BaseHandler):
 						    e_msg='Отчет за указанную '\
 						    	  'дату не найден')
 				return
+			yield tx.commit()
 		except Exception as e:
-			logger.exception("Unsupported file type")
+			logger.exception("Error with full report getting")
 			if len(e.args) > 0 and e.args[0] == DUPLICATE_ERROR:
 				self.rollback_error(tx, e_hdr=ERR_INSERT,
 						    e_msg='Запись с таким '\
 							  'идентификатором уже'\
 							  ' существует')
 			else:
-				self.rollback_error(tx, e_hdr=ERR_500,
-						    e_msg='На сервере '\
-							  'произошла ошибка, '\
-							  'обратитесь к '\
-							  'администратору')
+				self.rollback_error(tx, e_hdr=ERR_500)
 		else:
-			yield tx.commit()
 			user = self.get_current_user()
 			assert(user)
 			assert('rights' in user)

@@ -29,8 +29,13 @@ class BaseHandler(tornado.web.RequestHandler):
 	##
 	# Render an error page with specified an error header and a message.
 	#
-	def render_error(self, e_hdr, e_msg, template='error_page.html',
+	def render_error(self, e_hdr, e_msg=None, template='error_page.html',
 			 **kwargs):
+		if e_msg == None:
+			if e_hdr in ERR_MESSAGES:
+				e_msg = ERR_MESSAGES[e_hdr]
+			else:
+				e_msg = ''
 		self.render(template, error_header=e_hdr,
 			    error_msg=e_msg, **kwargs)
 
@@ -54,7 +59,7 @@ class BaseHandler(tornado.web.RequestHandler):
 	# for rollback.
 	#
 	@tornado.gen.coroutine
-	def rollback_error(self, tx, e_hdr, e_msg):
+	def rollback_error(self, tx, e_hdr, e_msg=None):
 		self.render_error(e_hdr=e_hdr, e_msg=e_msg)
 		try:
 			yield self.flush()
