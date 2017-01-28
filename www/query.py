@@ -566,7 +566,6 @@ def update_user_by_id(tx, cols, id):
 	params += (id, )
 	yield tx.execute(query=sql, params=params)
 
-
 ##
 # Get count of users
 #
