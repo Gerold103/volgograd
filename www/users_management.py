@@ -11,7 +11,6 @@ from tornado.escape import to_unicode
 import tormysql
 
 import secret_conf
-
 import application
 from base_handler import BaseHandler
 from query import *
@@ -104,9 +103,8 @@ class UsersHandler(BaseHandler):
 			tx = yield application.begin()
 
 			# get all user's data by id
-			user = yield get_user_by_id(tx, 'email, password, '\
-			       					   'salt, rights, name',
-			       					   user_id)
+			cols = ['email', 'password', 'salt', 'rights', 'name']
+			user = yield get_user_by_id(tx, cols, user_id)
 			if not user:
 				self.rollback_error(tx, e_hdr=ERR_404, e_msg=USER_NOT_EXISTS)
 				return False
@@ -272,7 +270,8 @@ class UsersHandler(BaseHandler):
 			tx = yield application.begin()
 
 			# insert the user into db
-			yield insert_full_user(tx, user_data)
+			cols = ['email', 'password', 'salt', 'name', 'rights']
+			yield insert_full_user(tx, cols, user_data)
 			yield tx.commit()
 		except Exception as e:
 			logger.exception(e)
@@ -308,8 +307,8 @@ class UsersHandler(BaseHandler):
 			limit = min(self.NUMBER_USERS_IN_PAGE, count_users)
 			offset = self.NUMBER_USERS_IN_PAGE * (page-1)
 			# get a list of all users from db
-			users = yield get_all_users(tx, 'id, name, email, rights',
-									   limit, offset)
+			cols = ['id', 'name', 'email', 'rights']
+			users = yield get_all_users(tx, cols, limit, offset)
 			yield tx.commit()
 		except Exception as e:
 			logger.exception(e)

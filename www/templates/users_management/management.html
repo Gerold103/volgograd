@@ -34,7 +34,7 @@
 			</thead>
 			<tbody>
 				{% for i, user in enumerate(users) %}
-					<tr class="clickable-row" data-toggle="collapse" data-target="#row_details_{{ i }}" class="accordion-toggle" data-user-id="{{ user[0] }}">
+					<tr class="um-clickable-row" data-toggle="collapse" data-target="#row_details_{{ i }}" class="accordion-toggle" data-user-id="{{ user[0] }}">
 						<td>{{ i+1 + num_in_page*(page-1) }}</td>
 						<td class="long_text"><span>{{ user[1] }}</span></td>
 						<td class="long_text"><span>{{ user[2] }}</span></td>
@@ -105,30 +105,28 @@
 	{% set enable_edit = current_user['rights'] & pers['can_edit_users'][0] %}
 	{% if enable_edit %}
 	<div class="col-md-2">
-		<a href="#" onclick="click_button_add()" class="btn btn-default btn-lg btn-block btn-success" data-toggle="modal" data-target="#modal_form">Добавить</a>
-		<a href="#" onclick="delete_user()" class="btn btn-default btn-lg btn-block btn-danger user_selected" disabled>Удалить</a>
-		<a href="#" onclick="click_button_edit()" class="btn btn-default btn-lg btn-block btn-warning user_selected" data-toggle="modal" data-target="#modal_form" disabled>Редактировать</a>
+		<a href="#" onclick="click_button_add()" class="btn btn-lg btn-block btn-success" data-toggle="modal" data-target="#modal_form">Добавить</a>
+		<a href="#" onclick="delete_user()" class="btnbtn-lg btn-block btn-danger user_selected" disabled>Удалить</a>
+		<a href="#" onclick="click_button_edit()" class="btn btn-lg btn-block btn-warning user_selected" data-toggle="modal" data-target="#modal_form" disabled>Редактировать</a>
 	</div>
 	{% end %}
 
 	<!-- the hidden form for deleting a user -->
 	<form style="display: hidden" action="/users_management?page={{ page -	int(not (len(users)-1) % num_in_page) }}" method="POST" id="user_form_delete">
-		<input type="hidden" id="action" name="action" value=""/>
-		<input type="hidden" id="id" name="id" value=""/>
+		<input type="hidden" id="action" name="action"/>
+		<input type="hidden" id="id" name="id"/>
 	</form>
 	<script>
 		// delete button's click handler
 		function delete_user() {
 			user_id = $('#users_table').find('.bg-primary').attr('data-user-id');
 			
-			if (!user_id) {
+			if (!user_id)
 				return;
-			}
 
 			var ok = confirm("Вы уверены? Действие нельзя будет отменить!");
-			if (!ok) {
+			if (!ok)
 				return;
-			}
 
 			document.getElementById('action').value = 'del';
 			document.getElementById('id').value = user_id;
@@ -383,7 +381,7 @@
 
 		unselect();
 
-		$('#users_table').on('click', '.clickable-row', function(event) {
+		$('#users_table').on('click', '.um-clickable-row', function(event) {
 			if($(this).hasClass('bg-primary')){
 				unselect(this);
 			} else {
@@ -396,7 +394,7 @@
 			if (!$(event.target).closest('#users_table').length &&
 				!$(event.target).hasClass('user_selected')) 
 			{
-				unselect('.clickable-row');
+				unselect('.um-clickable-row');
 			}
 		});
 	</script>

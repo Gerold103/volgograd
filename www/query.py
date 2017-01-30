@@ -481,10 +481,6 @@ def prepare_tests(tx, old_db_name, test_db_name):
 	      .format(test_db_name, test_db_name, test_db_name, old_db_name,
 		      old_db_name, old_db_name, old_db_name, old_db_name)
 	yield tx.execute(sql)
-def insert_user(tx, email, pass_hash):
-	sql = "INSERT INTO users(email, pass_hash) VALUES (%s, %s)"
-	params = (email, pass_hash)
-	yield tx.execute(query=sql, params=params)
 
 ##
 # Insert the user to the users table.
@@ -504,7 +500,7 @@ def insert_user(tx, email, pass_hash):
 #
 @tornado.gen.coroutine
 def get_all_users(tx, cols, limit, offset):
-	sql = "SELECT {} FROM users LIMIT %s OFFSET %s".format(cols)
+	sql = "SELECT {} FROM users LIMIT %s OFFSET %s".format(','.join(cols))
 	params = (limit, offset)
 	cursor = yield tx.execute(query=sql, params=params)
 
@@ -521,13 +517,14 @@ def get_all_users(tx, cols, limit, offset):
 # Insert a user to database
 #
 @tornado.gen.coroutine
-def insert_full_user(tx, src):
-	sql = "INSERT INTO users(email, password, salt, name, rights) "\
-		"VALUES (%s, %s, %s, %s, %s)"
+def insert_full_user(tx, cols, src):
+	#email, password, salt, name, rights
+	str_args = ['%s'] * len(cols)
+	sql = "INSERT INTO users({}) VALUES ({})"\
+		.format(','.join(cols), ','.join(str_args))
 	assert('email' in src)
 	assert('password' in src)
 	assert('salt' in src)
-	assert('name' in src)
 	assert('rights' in src)
 	params = (src['email'], src['password'], src['salt'], \
 			 src['name'], src['rights'])
@@ -548,7 +545,7 @@ def delete_user_by_id(tx, id):
 #
 @tornado.gen.coroutine
 def get_user_by_id(tx, cols, id):
-	sql = "SELECT {} FROM users WHERE id = %s".format(cols)
+	sql = "SELECT {} FROM users WHERE id = %s".format(','.join(cols))
 	params = (id, )
 	cursor = yield tx.execute(query=sql, params=params)
 	return cursor.fetchone()
