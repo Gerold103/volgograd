@@ -15,6 +15,8 @@ import secret_conf
 
 import application
 from base_handler         import BaseHandler, need_rights
+import db
+from base_handler         import BaseHandler
 from upload_handler       import UploadHandler
 from show_handler         import ShowHandler
 from water_consum_handler import WaterConsumHandler
@@ -250,7 +252,6 @@ class GetMonthParameterHandler(BaseHandler):
 					       'обратитесь к администратору')
 			return
 
-
 if __name__ == "__main__":
 	parser = argparse.ArgumentParser(description='VolComHoz')
 	parser.add_argument('--port', '-p', type=int, required=True,
@@ -294,7 +295,6 @@ if __name__ == "__main__":
 	application.template_path = 'templates/'
 	application.static_path = 'static/'
 	application.login_url = '/login'
-
 	logger.setLevel(logging.DEBUG)
 	formatter = logging.Formatter('%(asctime)s - %(levelname)s - %(message)s')
 	sh = logging.StreamHandler()
