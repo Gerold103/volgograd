@@ -10,7 +10,8 @@ import tornado.web
 import tornado.gen
 
 import application
-from xml_parser import parse_xls
+from xml_parser import parse_xls, XLSCellEqualError, XLSCellInError,\
+		       XLSTypeError
 from base_handler import BaseHandler, need_rights
 from query import *
 from constants import *
@@ -118,16 +119,40 @@ class UploadHandler(BaseHandler):
 			# Get date in dd.mm.yyyy format
 			date = data['date']
 			# Create datetime python object
-			date = datetime.strptime(date, '%d.%m.%Y')
+			date = datetime.strptime(date, date_format)
 			# Convert it to the format yyyy-mm-dd as in mysql
 			# database.
-			date = date.strftime('%Y-%m-%d')
+			date = date.strftime(date_format)
 			self.redirect('/show_table?date={}'.format(date))
 		except BadZipFile:
 			logger.exception("Unsupported file type")
 			self.rollback_error(tx, e_hdr=ERR_INSERT,
 					    e_msg='Файл имеет неподдерживаемый'\
 						  ' формат')
+		except XLSTypeError as e:
+			logger.exception("Type error")
+			str_type = e.expected
+			if str_type == int:
+				str_type = '"Целое число"'
+			else:
+				str_type = '"Число с плавающей точкой"'
+			msg = 'Ошибка в типе значения в строке {}, столбце {}:'\
+			      ' ожидался тип {}, а получено значение: {}'\
+			      .format(e.row, e.column, str_type, e.real)
+			self.rollback_error(tx, e_hdr=ERR_INSERT, e_msg=msg)
+		except XLSCellEqualError as e:
+			logger.exception("One of values in report is incorrect")
+			msg = 'Ошибка в строке {}, столбце {}: ожидалось '\
+			      'значение "{}", однако встречено "{}"'\
+			      .format(e.row, e.column, e.expected, e.real)
+			self.rollback_error(tx, e_hdr=ERR_INSERT, e_msg=msg)
+		except XLSCellInError as e:
+			logger.exception("One of values in report is incorrect")
+			words = ', '.join(['"{}"' % val for val in e.expected])
+			msg = 'Ошибка в строке {}, столбце {}: в ячейке '\
+			      'ожидались слова {}, однако встречено {}'\
+			      .format(e.row, e.column, words, e.real)
+			self.rollback_error(tx, e_hdr=ERR_INSERT, e_msg=msg)
 		except Exception as e:
 			logger.exception("Error with uploading report")
 			if len(e.args) > 0 and e.args[0] == DUPLICATE_ERROR:

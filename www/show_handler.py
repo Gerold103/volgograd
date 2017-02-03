@@ -163,4 +163,5 @@ class ShowHandler(BaseHandler):
 			enable_delete = user['rights'] & CAN_DELETE_REPORTS
 			self.render('show_table.html', **report,
 				    get_val=get_html_val,
-				    enable_delete=enable_delete)
+				    enable_delete=enable_delete,
+				    get_date=get_str_date)

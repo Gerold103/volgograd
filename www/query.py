@@ -6,6 +6,7 @@ from datetime import date as libdate
 
 import tornado
 import tornado.gen
+from constants import date_format
 
 boiler_room_report_cols = [
 	'T1', 'T2', 'gas_pressure',
@@ -110,7 +111,7 @@ def get_districts_with_boilers(tx):
 def get_report_by_date(tx, date, cols):
 	sql = "SELECT {} FROM reports WHERE date = "\
 	      "STR_TO_DATE(%s, %s)".format(','.join(cols))
-	params = (date, '%d.%m.%Y')
+	params = (date, date_format)
 	cursor = yield tx.execute(query=sql, params=params)
 	return cursor.fetchone()
 
@@ -282,7 +283,7 @@ def get_safe_val(src, name):
 # Get a string representing the specified date.
 #
 def get_str_date(year, month, day):
-	return libdate(year=year, month=month, day=day).strftime('%Y-%m-%d')
+	return libdate(year=year, month=month, day=day).strftime(date_format)
 
 ##
 # Convert not existing and None values to '-' for html output.
@@ -333,14 +334,14 @@ def insert_report(tx, src):
 	sql = 'INSERT INTO reports VALUES (NULL, STR_TO_DATE(%s, %s), %s, %s, '\
 	      '%s, %s, %s, STR_TO_DATE(%s, %s), %s, %s, %s, %s, %s, %s, %s)'
 	params = (get_safe_val(src, 'date'),
-		  '%d.%m.%Y',
+		  date_format,
 		  get_safe_val(src, 'temp_average_air'),
 		  get_safe_val(src, 'temp_average_water'),
 		  get_safe_val(src, 'expected_temp_air_day'),
 		  get_safe_val(src, 'expected_temp_air_night'),
 		  get_safe_val(src, 'expected_temp_air_all_day'),
 		  get_safe_val(src, 'forecast_date'),
-		  '%d.%m.%Y',
+		  date_format,
 		  get_safe_val(src, 'forecast_weather'),
 		  get_safe_val(src, 'forecast_direction'),
 		  get_safe_val(src, 'forecast_speed'),
@@ -361,7 +362,7 @@ def insert_report(tx, src):
 @tornado.gen.coroutine
 def get_full_report_by_date(tx, date):
 	sql = 'SELECT * FROM reports WHERE date = STR_TO_DATE(%s, %s)'
-	params = (date, '%Y-%m-%d')
+	params = (date, date_format)
 	cursor = yield tx.execute(query=sql, params=params)
 	report = cursor.fetchone()
 	if not report:

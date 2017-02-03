@@ -1,8 +1,6 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 
-import urllib
-
 import tornado.testing
 import tornado.gen
 from tornado.httpclient import HTTPError
@@ -17,76 +15,6 @@ from base_test_suite import BaseTestSuite, test_users
 # Test that user can login and logout using his credentials.
 #
 class TestSuiteLoginLogout(BaseTestSuite):
-	##
-	# Login user using the specified email and password.
-	# @param email    Email address, string.
-	# @param password User password, string.
-	# @param kwargs   Additional arguments for client.fetch().
-	#                 @sa AsyncHTTPClient.fetch()
-	# @retval 'error' in answer - Error during the request.
-	# @retval Dictionary with cookie 'headers' key,
-	#         'id' - user identifier, 'name' - user name,
-	#         'rights' - mask of the user rights.
-	#
-	@tornado.gen.coroutine
-	def login_user(self, email, password, **kwargs):
-		client = self.get_client()
-		#
-		# Post the credentials to the login url.
-		#
-		post_data = {}
-		if email is not None:
-			post_data['email'] = email
-		if password is not None:
-			post_data['password'] = password
-		body = urllib.parse.urlencode(post_data)
-		response = None
-		try:
-			url = self.get_url('/login')
-			response = yield client.fetch(url, method="POST",
-						      body=body,
-						      follow_redirects=False,
-						      **kwargs)
-		except HTTPError as e:
-			#
-			# Catch redirect to the main page.
-			# @sa class LoginHandler which
-			# makes redirect in case of
-			# success login.
-			#
-			response = e.response
-		if response.code != 302:
-			return { 'error': 'Failed to login',
-				 'response': response }
-		#
-		# Parse cookies.
-		#
-		user_id = None
-		user_name = None
-		rights = None
-
-		user_id = int(self.decode_cookie(response, 'user_id', 1))
-		user_name = self.decode_cookie(response, 'user_name', 1)
-		user_name = user_name.decode('utf-8')
-		rights = int(self.decode_cookie(response, 'rights', 1))
-		#
-		# Follow the redirect url.
-		#
-		headers = self.build_cookie_headers(response)
-		location = response.headers.get_list('Location')[0]
-		url = self.get_url(location)
-		response = yield client.fetch(url, method="GET",
-					      headers=headers)
-		#
-		# Check that the page contains the link to
-		# logout - it is the sign that login was
-		# succesfull.
-		#
-		body = response.body.decode('utf-8')
-		self.assertIn('logout', body)
-		return { 'headers': headers, 'id': user_id, 'name': user_name,
-			 'rights': rights }
-
 	##
 	# Ensure that an unaurhorized user will be redirected to
 	# /login from any page.
