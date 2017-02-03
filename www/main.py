@@ -261,7 +261,7 @@ if __name__ == "__main__":
 	conn_timeout = secret_conf.db_connection_timeout
 	db_name = secret_conf.db_name
 	if args.test:
-		db_name = 'test_volgograd'
+		db_name = secret_conf.test_db_name
 	application.connect_db_args = {
 		'max_connections': max_conn,
 		'idle_seconds': idle,

@@ -15,6 +15,7 @@ max_db_connections = 20
 db_idle_seconds = 7200
 db_connection_timeout = 3
 db_charset = 'utf8'
+test_db_name = "test_volgograd"
 
 pepper = None
 
@@ -49,3 +50,5 @@ def parse_config():
 			db_connection_timeout = conf['db_connection_timeout']
 		if 'db_charset' in conf:
 			db_charset = conf['db_charset']
+		if 'test_db_name' in conf:
+			test_db_name = conf['test_db_name']

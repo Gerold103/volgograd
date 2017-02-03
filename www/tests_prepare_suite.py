@@ -27,7 +27,7 @@ class AAA_TestSuitePrepare(BaseTestSuite):
 		application.connect_db()
 
 		tx = yield application.begin()
-		yield prepare_tests(tx, sc.db_name, 'test_volgograd')
+		yield prepare_tests(tx, sc.db_name, sc.test_db_name)
 		#
 		# Insert users to testing and ensure the
 		# correctness of the insert.
