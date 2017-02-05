@@ -4,6 +4,7 @@
 
 {% block links %}
 <script type="text/javascript" src="{{ static_url('js/Chart.bundle.js') }}"></script>
+<script type="text/javascript" src="{{ static_url('js/plot_builder.js') }}"></script>
 {% end %}
 
 {% block body %}
@@ -143,8 +144,6 @@
 	</div>
 </div>
 <canvas id="plot" style="max-height: 600px;"></canvas>
-
-{% include "plot_builder.html" %}
 
 <script type="text/javascript">
 	function plot_parameter(control_data) {

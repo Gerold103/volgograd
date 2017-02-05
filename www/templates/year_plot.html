@@ -4,6 +4,7 @@
 
 {% block links %}
 <script type="text/javascript" src="{{ static_url('js/Chart.bundle.js') }}"></script>
+<script type="text/javascript" src="{{ static_url('js/plot_builder.js') }}"></script>
 {% end %}
 
 {% block body %}
@@ -225,8 +226,6 @@
 	<canvas id="plot"></canvas>
 	<div class="chartjs-tooltip" id="plot-tooltip"></div>
 </div>
-
-{% include "plot_builder.html" %}
 
 <script type="text/javascript">
 	var customTooltips = function (tooltip) {
