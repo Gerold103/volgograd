@@ -21,7 +21,19 @@
 											forecast_date.month,
 											forecast_date.day) %}
 								<td>Прогноз на <u><a href="/show_table?date={{ fdate }}">{{ fdate }}</a></u></td>
-								<td>{{ forecast_weather }} {{ forecast_direction }}</td>
+								{% if forecast_weather is not None %}
+									{% set dir = forecast_direction %}
+									{% if dir in wind_directions %}
+										{% set dir = wind_directions[dir] %}
+									{% end %}
+									{% if dir is not None %}
+										<td>{{ forecast_weather }} {{ dir }}</td>
+									{% else %}
+										<td></td>
+									{% end %}
+								{% else %}
+									<td></td>
+								{% end %}
 								<td>T<sub>день</sub> = {{ forecast_temp_day_from }} ~ {{ forecast_temp_day_to }} C<sup>o</sup></td>
 								<td>T<sub>ночь</sub> = {{ forecast_temp_night_from }} ~ {{ forecast_temp_night_to }} C<sup>o</sup></td>
 							</tr>
