@@ -139,14 +139,17 @@
 				<div class="input-group-addon">Максимум Ox</div>
 				<input type="text" id="plot-x-max" placeholder="по умолчанию" class="form-control">
 			</div>
-			<button class="btn btn-primary" onclick="update_plot();">Обновить график</button>
+			<button class="btn btn-primary" onclick="update_plot(plot_id);">Обновить график</button>
 		</div>
 	</div>
 </div>
 <canvas id="plot" style="max-height: 600px;"></canvas>
 
 <script type="text/javascript">
-	function plot_parameter(control_data) {
+	var plot_id = 'plot';
+	plot_create(plot_id);
+
+	function plot_parameter(plot_id, control_data) {
 		var $tr = $("#" + control_data.param);
 		var title = $tr.attr("name");
 		var offset = $tr.attr("data-offset");
@@ -176,35 +179,30 @@
 				 */
 				values.push(NaN);
 		});
-
 		/*
 		 * Recreate the plot if exists to show new data
 		 * and delete old.
 		 */
-		if (plot_is_created()) {
-			get_plot_object().destroy();
-		}
-		plot_clear_data();
-		plot_set_labels(labels);
-		plot_add_data({ label: 'Значения', color: 'rgb(75, 192, 192)',
-			        data: values });
-
-		plot_set_title(title);
-		plot_object_set(new Chart(get_plot_DOM(),
-				{ type: 'line', data: plot_data,
-				  options: plot_options }));
+		if (plot_is_showed(plot_id))
+			plot_destroy(plot_id);
+		plot_clear_data(plot_id);
+		plot_set_labels(plot_id, labels);
+		plot_add_data(plot_id, { label: 'Значения',
+					 color: 'rgb(75, 192, 192)',
+					 data: values });
+		plot_set_title(plot_id, title);
+		plot_show(plot_id);
 	};
 
-	function read_param(control_data) {
+	function read_param(plot_id, control_data) {
 		var param = document.getElementById("plot-param").value;
 		control_data.param = param;
 	};
-
-	plot_set_builder(plot_parameter);
-	plot_set_param_reader(read_param);
+	plot_add_trigger_on_update(plot_id, read_param);
+	plot_add_trigger_on_update(plot_id, plot_parameter);
 
 	window.onload = function() {
-		update_plot();
+		update_plot(plot_id);
 	};
 	$("tbody tr").click(function(e) {
 		plot_parameter({ param: e.currentTarget.id });

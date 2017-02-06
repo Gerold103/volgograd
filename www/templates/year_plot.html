@@ -218,7 +218,7 @@
 				</select>
 			</div>
 			<br><br>
-			<button class="btn btn-primary" onclick="update_plot();">Обновить график</button>
+			<button class="btn btn-primary" onclick="update_plot(plot_id);">Обновить график</button>
 		</div>
 	</div>
 </div>
@@ -228,36 +228,13 @@
 </div>
 
 <script type="text/javascript">
-	var customTooltips = function (tooltip) {
-		$(this._chart.canvas).css("cursor", "pointer");
-
-		$(".chartjs-tooltip").css({
-			opacity: 0,
-		});
-
-		if (!tooltip || !tooltip.opacity) {
-			return;
-		}
-
-		if (tooltip.dataPoints.length > 0) {
-			tooltip.dataPoints.forEach(function (dataPoint) {
-				var content = 'Воздух: ' + dataPoint.xLabel + '<br>Вода: ' + dataPoint.yLabel;
-				var $tooltip = $("#plot-tooltip");
-				$tooltip.html(content);
-				$tooltip.css({
-					opacity: 1,
-					top: dataPoint.y + "px",
-					left: dataPoint.x + "px",
-				});
-			});
-		}
-	};
-
-	plot_set_title("{{ boiler_ids[0]['title'] }}");
-	plot_options.hover.intersect = false;
-	plot_options.hover.mode = 'index';
-	plot_set_xLabel('Температура воздуха');
-	plot_set_yLabel('Температура нагрева');
+	var plot_id = 'plot';
+	plot_create(plot_id);
+	plot_set_title(plot_id, "{{ boiler_ids[0]['title'] }}");
+	plot_options(plot_id).hover.intersect = false;
+	plot_options(plot_id).hover.mode = 'index';
+	plot_set_xLabel(plot_id, 'Температура воздуха');
+	plot_set_yLabel(plot_id, 'Температура нагрева');
 
 	function download_and_plot_parameter(control_data) {
 		var param = control_data.param;
@@ -294,14 +271,14 @@
 				 * try to plot it.
 				 */
 				control_data.can_upload = false;
-				plot_parameter(control_data);
+				plot_parameter(plot_id, control_data);
 			}
 		});
 	};
 	function points_compare(a, b) {
 		return a.x - b.x;
 	};
-	function plot_parameter(control_data) {
+	function plot_parameter(plot_id, control_data) {
 		var boiler = boiler_params[control_data.boiler_id];
 		var param_id = control_data.param;
 		var param = params_config[param_id];
@@ -338,38 +315,32 @@
 		ideal_values_up.sort(points_compare);
 		real_values.sort(points_compare);
 
-		if (plot_is_created())
-			get_plot_object().destroy();
+		if (plot_is_showed(plot_id))
+			plot_destroy(plot_id);
 
-		plot_clear_data();
-		plot_set_title(title);
-		plot_add_data({ label: 'Реальные значения', color: '#8a9bff',
-				type: 'bubble', data: real_values });
-		plot_add_data({ label: 'Идеальные значения', color: '#c3ffcd',
-				type: 'line', data: ideal_values,
-				no_points: true });
+		plot_clear_data(plot_id);
+		plot_set_title(plot_id, title);
+		plot_add_data(plot_id, { label: 'Реальные значения',
+					 color: '#8a9bff', type: 'bubble',
+					 data: real_values });
+		plot_add_data(plot_id, { label: 'Идеальные значения',
+					 color: '#c3ffcd', type: 'line',
+					 data: ideal_values, no_points: true });
+		plot_add_data(plot_id, { label: 'Идеальные значения, нижняя '+
+						'граница', color: '#e4dd28',
+					 type: 'line', data: ideal_values_low,
+					 no_points: true,
+					 border_dash: [5, 8] });
+		plot_add_data(plot_id, { label: 'Идеальные значения, верхняя '+
+						'граница', color: '#ffbbbb',
+					 type: 'line', data: ideal_values_up,
+					 no_points: true,
+					 border_dash: [5, 8] });
+		plot_set_type(plot_id, 'bubble');
+		plot_show(plot_id);
 
-		/*
-		 * Border dash [x, y] means that line will have
-		 * gaps length y pixels and dashes with x pixels
-		 * length:
-		 * ----     ----     ----     ----    ...
-		 *  x    y   x    y    x   y    x     ...
-		 */
-		plot_add_data({ label: 'Идеальные значения, нижняя граница',
-				color: '#e4dd28', type: 'line',
-				data: ideal_values_low, no_points: true,
-				border_dash: [5, 8] });
-		plot_add_data({ label: 'Идеальные значения, верхняя граница',
-				color: '#ffbbbb', type: 'line',
-				data: ideal_values_up, no_points: true,
-				border_dash: [5, 8] });
-		plot_object_set(new Chart(get_plot_DOM(),
-					  { type: 'bubble', data: plot_data,
-					    options: plot_options }));
-
-		var x_max = plot_get_x_max();
-		var x_min = plot_get_x_min();
+		var x_max = plot_get_x_max(plot_id);
+		var x_min = plot_get_x_min(plot_id);
 		/*
 		 * The plot showed with ChartJS can show some gaps
 		 * on left and right sides of the plot. To fill
@@ -408,19 +379,18 @@
 			}
 		}
 		if (was_updated)
-			get_plot_object().update();
+			plot_refresh(plot_id);
 	};
 
-	function read_params(control_data) {
+	function read_params(plot_id, control_data) {
 		var boiler_id = document.getElementById("plot-boiler-id").value;
 		var param = document.getElementById("plot-param").value;
 		control_data.boiler_id = boiler_id;
 		control_data.param = param;
 		control_data.can_upload = true;
 	};
-
-	plot_set_builder(plot_parameter);
-	plot_set_param_reader(read_params);
+	plot_add_trigger_on_update(plot_id, read_params);
+	plot_add_trigger_on_update(plot_id, plot_parameter);
 
 	window.onload = function() {
 		/* Build selector for parameters. */
@@ -434,9 +404,9 @@
 		}
 
 		/* Plot the first parameter of the first boiler. */
-		plot_parameter({ boiler_id: {{ boiler_ids[0]['id'] }},
-				 param: "{{ first_column }}",
-				 can_upload: false });
+		plot_parameter(plot_id, { boiler_id: {{ boiler_ids[0]['id'] }},
+					  param: "{{ first_column }}",
+					  can_upload: false });
 	};
 </script>
 
