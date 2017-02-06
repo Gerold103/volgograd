@@ -74,7 +74,7 @@ class AAA_TestSuitePrepare(BaseTestSuite):
 		self.assertIn('show_table',
 			      response.headers.get_list('Location')[0])
 
-	@tornado.testing.gen_test(timeout=15)
+	@tornado.testing.gen_test(timeout=60)
 	def test2_insert_reports(self):
 		application.connect_db()
 
