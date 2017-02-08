@@ -49,6 +49,14 @@
 								<td>t<sub>воды</sub> = {{ temp_average_water }} C<sup>o</sup></td>
 								<td><td>
 							</tr>
+							{% if author %}
+								<tr>
+									<td>Автор отчета</td>
+									<td>{{ author }}</td>
+									<td></td>
+									<td></td>
+								</tr>
+							{% end %}
 						</tbody>
 					</table>
 				</div>

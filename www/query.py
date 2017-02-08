@@ -330,18 +330,16 @@ def insert_boiler_room_report(tx, src, room_id, report_id):
 # them with NULL values.
 #
 @tornado.gen.coroutine
-def insert_report(tx, src):
-	sql = 'INSERT INTO reports VALUES (NULL, STR_TO_DATE(%s, %s), %s, %s, '\
-	      '%s, %s, %s, STR_TO_DATE(%s, %s), %s, %s, %s, %s, %s, %s, %s)'
-	params = (get_safe_val(src, 'date'),
-		  date_format,
+def insert_report(tx, author_id, src):
+	sql = 'INSERT INTO reports VALUES (NULL, %s, STR_TO_DATE(%s, %s), %s, '\
+	      '%s, %s, %s, %s, STR_TO_DATE(%s, %s), %s, %s, %s, %s, %s, %s, %s)'
+	params = (author_id, get_safe_val(src, 'date'), date_format,
 		  get_safe_val(src, 'temp_average_air'),
 		  get_safe_val(src, 'temp_average_water'),
 		  get_safe_val(src, 'expected_temp_air_day'),
 		  get_safe_val(src, 'expected_temp_air_night'),
 		  get_safe_val(src, 'expected_temp_air_all_day'),
-		  get_safe_val(src, 'forecast_date'),
-		  date_format,
+		  get_safe_val(src, 'forecast_date'), date_format,
 		  get_safe_val(src, 'forecast_weather'),
 		  get_safe_val(src, 'forecast_direction'),
 		  get_safe_val(src, 'forecast_speed'),
@@ -361,7 +359,8 @@ def insert_report(tx, src):
 #
 @tornado.gen.coroutine
 def get_full_report_by_date(tx, date):
-	sql = 'SELECT * FROM reports WHERE date = STR_TO_DATE(%s, %s)'
+	sql = 'SELECT reports.*, users.name FROM reports LEFT JOIN users '\
+	      'ON (author_id = users.id) WHERE date = STR_TO_DATE(%s, %s)'
 	params = (date, date_format)
 	cursor = yield tx.execute(query=sql, params=params)
 	report = cursor.fetchone()
@@ -403,20 +402,21 @@ def get_full_report_by_date(tx, date):
 		rooms.append(next_report)
 		next_row = cursor.fetchone()
 	result = {}
-	result['date'] = report[1]
-	result['temp_average_air'] = report[2]
-	result['temp_average_water'] = report[3]
-	result['expected_temp_air_day'] = report[4]
-	result['expected_temp_air_night'] = report[5]
-	result['expected_temp_air_all_day'] = report[6]
-	result['forecast_date'] = report[7]
-	result['forecast_weather'] = report[8]
-	result['forecast_direction'] = report[9]
-	result['forecast_speed'] = report[10]
-	result['forecast_temp_day_from'] = report[11]
-	result['forecast_temp_day_to'] = report[12]
-	result['forecast_temp_night_from'] = report[13]
-	result['forecast_temp_night_to'] = report[14]
+	result['date'] = report[2]
+	result['temp_average_air'] = report[3]
+	result['temp_average_water'] = report[4]
+	result['expected_temp_air_day'] = report[5]
+	result['expected_temp_air_night'] = report[6]
+	result['expected_temp_air_all_day'] = report[7]
+	result['forecast_date'] = report[8]
+	result['forecast_weather'] = report[9]
+	result['forecast_direction'] = report[10]
+	result['forecast_speed'] = report[11]
+	result['forecast_temp_day_from'] = report[12]
+	result['forecast_temp_day_to'] = report[13]
+	result['forecast_temp_night_from'] = report[14]
+	result['forecast_temp_night_to'] = report[15]
+	result['author'] = report[16]
 	result['districts'] = []
 	for dist, rooms in sorted(districts.items(), key=lambda x: x[0]):
 		district = {'name': dist}

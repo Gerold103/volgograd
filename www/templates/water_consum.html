@@ -205,7 +205,7 @@
 		update_plot(plot_id);
 	};
 	$("tbody tr").click(function(e) {
-		plot_parameter({ param: e.currentTarget.id });
+		plot_parameter(plot_id, { param: e.currentTarget.id });
 	});
 </script>
 {% end %}

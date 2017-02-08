@@ -3,6 +3,7 @@ CREATE DATABASE volgograd;
 USE volgograd;
 
 CREATE TABLE reports (id INT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
+	author_id INT UNSIGNED,
 	date DATE,
 	temp_average_air DOUBLE,
 	temp_average_water DOUBLE,
@@ -17,6 +18,7 @@ CREATE TABLE reports (id INT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
 	forecast_temp_day_to DOUBLE,
 	forecast_temp_night_from DOUBLE,
 	forecast_temp_night_to DOUBLE,
+	FOREIGN KEY (autor_id) REFERENCES users(id) ON DELETE SET NULL,
 	UNIQUE (date)) CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 CREATE TABLE districts (id INT UNSIGNED AUTO_INCREMENT PRIMARY KEY,

@@ -98,7 +98,8 @@ class UploadHandler(BaseHandler):
 			#
 			# Start a transaction. Commit only if all is good
 			#
-			yield insert_report(tx, data)
+			yield insert_report(tx, self.current_user['user_id'],
+					    data)
 			#
 			# Get the inserted report id for creating foreign key to
 			# it in other tables.
