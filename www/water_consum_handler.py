@@ -46,7 +46,7 @@ class WaterConsumHandler(BaseHandler):
 			return
 		tx = None
 		try:
-			start_week, month_range =\
+			start_week, days_count =\
 				calendar.monthrange(year, month)
 			tx = yield application.begin()
 			statistics = None
@@ -68,7 +68,7 @@ class WaterConsumHandler(BaseHandler):
 				return
 			self.render('water_consum.html', month_names=month_names,
 				    month=month, year=year,
-				    month_range=month_range,
+				    days_count=days_count,
 				    statistics=statistics, get_val=get_html_val,
 				    get_float=get_html_float_to_str,
 				    get_date=get_str_date)

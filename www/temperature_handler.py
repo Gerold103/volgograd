@@ -63,10 +63,10 @@ class TemperatureHandler(BaseHandler):
 			# parameter identifiers.
 			#
 			districts = yield get_districts_with_boilers(tx)
-			start_week, month_range =\
+			start_week, days_count =\
 				calendar.monthrange(year, month)
 			self.render("temperature.html", year=year,
-				    days_count=month_range, districts=districts,
+				    days_count=days_count, districts=districts,
 				    month_names=month_names, month=month,
 				    get_date=get_str_date, get_val=get_html_val)
 			tx.commit()

@@ -8,50 +8,58 @@
 {% end %}
 
 {% block body %}
+{% autoescape None %}
 <h1>Расход воды<br>{{ month_names[month - 1] }}, {{ year }}</h1>
 
-{% set table_struct = [
-	{
-		'title': 'Расход воды<br>в час',
-		'childs': [
-			{
-				'title': 'Расчетный',
-				'id': 'net_water_consum_expected_ph',
-				'name': 'Расход воды в час, расчетный'
-			},
-			{
-				'title': 'Фактический',
-				'id': 'net_water_consum_real_ph',
-				'name': 'Расход воды в час, фактический'
-			}
-		]
-	},
-	{
-		'title': 'Расход<br>подпиточной<br>воды',
-		'childs': [
-			{
-				'title': 'Расчетный',
-				'id': 'make_up_water_consum_expected_ph',
-				'name': 'Расход подпиточной воды, расчетный'
-			},
-			{
-				'title': 'Фактический<br>на 6:00',
-				'id': 'make_up_water_consum_real_ph',
-				'name': 'Расход подпиточной воды, фактический на 6:00'
-			},
-			{
-				'title': 'Фактический<br>за сутки',
-				'id': 'make_up_water_consum_real_pd',
-				'name': 'Расход подпиточной воды, фактический за сутки'
-			},
-			{
-				'title': 'Фактический<br>за месяц',
-				'id': 'make_up_water_consum_real_pm',
-				'name': 'Расход подпиточной воды, фактический за месяц'
-			},
-		]
-	},
-] %}
+<script type="text/javascript">
+	var param_values = {{ json_encode(statistics) }};
+	function get_value_cb(name, x) {
+		var param = param_values[name];
+		if (! (x in param))
+			return NaN;
+		return param[x];
+	};
+
+	var params_config = {
+		water_consum_ph: {
+			title: 'Расход воды<br>в час',
+			type: 'set',
+			childs: ['net_water_consum_expected_ph',
+				 'net_water_consum_real_ph']
+		},
+		make_up_water_consum: {
+			title: 'Расход<br>подпиточной<br>воды',
+			type: 'set',
+			childs: ['make_up_water_consum_expected_ph',
+				 'make_up_water_consum_real_ph',
+				 'make_up_water_consum_real_pd',
+				 'make_up_water_consum_real_pm']
+		}
+	};
+	function add_parameter(param, title, plot_label) {
+		params_config[param] = {
+			title: title,
+			plot_label: plot_label,
+			get_value: get_value_cb,
+			is_child: true,
+			color: 'rgb(75, 192, 192)'
+		};
+	};
+	add_parameter('net_water_consum_expected_ph', 'Расчетный',
+		      'Расход воды в час, расчетный');
+	add_parameter('net_water_consum_real_ph', 'Фактический',
+		      'Расход воды в час, фактический');
+
+	add_parameter('make_up_water_consum_expected_ph', 'Расчетный',
+		      'Расход подпиточной воды, расчетный');
+	add_parameter('make_up_water_consum_real_ph', 'Фактический<br>на 6:00',
+		      'Расход подпиточной воды, фактический на 6:00');
+	add_parameter('make_up_water_consum_real_pd', 'Фактический<br>за сутки',
+		      'Расход подпиточной воды, фактический за сутки');
+	add_parameter('make_up_water_consum_real_pm', 'Фактический<br>за месяц',
+		      'Расход подпиточной воды, фактический за месяц');
+
+</script>
 
 <div class="container-fluid boiler_rooms_table month-plot-table" align="center">
 	<table class="table table-bordered table-striped table-hover">
@@ -59,45 +67,15 @@
 			<tr align="center">
 				<td colspan="2">День</td>
 
-				{% for day in range(1, month_range + 1) %}
+				{% for day in range(1, days_count + 1) %}
 				<td><a href="/show_table?date={{ get_date(year, month, day) }}">
 					{{ day }}
 				</a></td>
 				{% end %}
 			</tr>
 		</thead>
-		<tbody>
-			{% autoescape None %}
-			{% for item in table_struct %}
-				{% if 'childs' in item %}
-					{% set first = item['childs'][0] %}
-					<tr align="center" id="{{ first['id'] }}" name="{{ first['name'] }}" data-offset="2">
-						<td rowspan="{{ len(item['childs']) }}">
-							{{ item['title'] }}
-						</td>
-					{% set childs_count = len(item['childs']) %}
-					{% for i in range(childs_count) %}
-						{% set child = item['childs'][i] %}
-						<td>{{ child['title'] }}</td>
-							{% for day in range(1, month_range + 1) %}
-								<td>{{ get_float(get_val(statistics, day), child['id']) }}</td>
-							{% end %}
-
-						</tr>
-						{% if i + 1 < childs_count %}
-							{% set next = item['childs'][i + 1] %}
-							<tr align="center" id="{{ next['id'] }}" name="{{ next['name'] }}" data-offset="1">
-						{% end %}
-					{% end %}
-				{% else %}
-					<tr align="center" id="{{ item['id'] }}" name="{{ item['title'] }}" data-offset="1">
-						<td colspan="2">{{ item['title'] }}</td>
-						{% for day in range(1, month_range + 1) %}
-							<td>{{ get_float(get_val(statistics, day), item['id']) }}</td>
-						{% end %}
-					</tr>
-				{% end %}
-			{% end %}
+		<tbody id="month-table-body">
+			<!-- Render on client side. -->
 		</tbody>
 	</table>
 </div>
@@ -119,15 +97,7 @@
 			<div class="input-group">
 				<div class="input-group-addon">Параметр</div>
 				<select class="form-control" id="plot-param">
-					{% for item in table_struct %}
-						{% if 'childs' in item %}
-							{% for child in item['childs'] %}
-								<option value="{{ child['id'] }}">{{ child['name'] }}</option>
-							{% end %}
-						{% else %}
-							<option value="{{ item['id'] }}">{{ item['title'] }}</option>
-						{% end %}
-					{% end %}
+					<!-- Render on client side. -->
 				</select>
 			</div>
 			<br><br>
@@ -146,66 +116,98 @@
 <canvas id="plot" style="max-height: 600px;"></canvas>
 
 <script type="text/javascript">
-	var plot_id = 'plot';
-	plot_create(plot_id);
-
-	function plot_parameter(plot_id, control_data) {
-		var $tr = $("#" + control_data.param);
-		var title = $tr.attr("name");
-		var offset = $tr.attr("data-offset");
-		var table_values = $tr.children().slice(offset);
-		var values = [];
-		var labels = [];
-		var day = 0;
-		table_values.map(function(k, v) {
-			++day;
-
-			/*
-			 * Skip all points bigger or smaller
-			 * Ox borders.
-			 */
-			if ('x_min' in control_data && day < control_data.x_min)
-				return;
-			if ('x_max' in control_data && day > control_data.x_max)
-				return;
-
-			labels.push(day);
-			if (v.innerHTML != '-')
-				values.push(parseFloat(v.innerHTML));
-			else
-				/*
-				 * Need to add NaN to show gaps on
-				 * the plot.
-				 */
-				values.push(NaN);
-		});
+	window.onload = function() {
 		/*
-		 * Recreate the plot if exists to show new data
-		 * and delete old.
+		 * Generate parameters table.
 		 */
-		if (plot_is_showed(plot_id))
-			plot_destroy(plot_id);
-		plot_clear_data(plot_id);
-		plot_set_labels(plot_id, labels);
-		plot_add_data(plot_id, { label: 'Значения',
-					 color: 'rgb(75, 192, 192)',
-					 data: values });
-		plot_set_title(plot_id, title);
-		plot_show(plot_id);
+		var table = document.getElementById('month-table-body');
+		clear_childs(table);
+		for (var name in params_config) {
+			if (! params_config.hasOwnProperty(name))
+				continue;
+			var param = params_config[name];
+			if (param.type != 'set')
+				continue;
+			var childs_cnt = param.childs.length;
+			for (var j = 0; j < childs_cnt; ++j) {
+				tr = document.createElement('tr');
+				if (j == 0) {
+					var td = document.createElement('td');
+					td.setAttribute('rowspan', childs_cnt);
+					td.innerHTML = param.title;
+					tr.appendChild(td);
+				}
+				ch_name = param.childs[j];
+				child = params_config[ch_name];
+				tr.setAttribute('id', ch_name);
+				var td = document.createElement('td');
+				td.innerHTML = child.title;
+				tr.appendChild(td);
+				for (var day = 1; day <= {{ days_count }};
+				     ++day) {
+					var val = child.get_value(ch_name, day);
+					td = document.createElement('td');
+					if (val == null)
+						td.innerHTML = '-';
+					else
+						td.innerHTML = val.toFixed(2);
+					tr.appendChild(td);
+				}
+				table.appendChild(tr);
+			}
+		}
+
+		/*
+		 * Generate list of parameters.
+		 */
+		var select = document.getElementById('plot-param');
+		clear_childs(select);
+		for (var name in params_config) {
+			if (! params_config.hasOwnProperty(name))
+				continue;
+			var param = params_config[name];
+			if (param.type == 'set')
+				continue;
+			var option = document.createElement('option');
+			option.setAttribute('value', name);
+			option.innerHTML = param.plot_label;
+			select.appendChild(option);
+		}
+
+		update_plot(plot_id);
+
+		$("tbody tr").click(function(e) {
+			var select = document.getElementById('plot-param');
+			select.value = e.currentTarget.id;
+			update_plot(plot_id);
+		});
 	};
+	function get_title(plot_id, control_data) {
+		return params_config[control_data.param].plot_label;
+	};
+	function get_x_values(plot_id, control_data) {
+		var days = [];
+		var x_min = 1;
+		if ('x_min' in control_data)
+			x_min = control_data.x_min;
+		var x_max = {{ days_count }};
+		if ('x_max' in control_data)
+			x_max = control_data.x_max;
+		for (var i = x_min; i <= x_max; ++i)
+			days.push(i);
+		plot_set_labels(plot_id, days);
+		return days;
+	};
+	var plot_id = 'plot';
+	plot_create(plot_id, params_config, get_title, get_x_values);
 
 	function read_param(plot_id, control_data) {
 		var param = document.getElementById("plot-param").value;
 		control_data.param = param;
+		plot_update_parameters_to_show(plot_id, [param, ]);
+		return true;
 	};
 	plot_add_trigger_on_update(plot_id, read_param);
-	plot_add_trigger_on_update(plot_id, plot_parameter);
-
-	window.onload = function() {
-		update_plot(plot_id);
-	};
-	$("tbody tr").click(function(e) {
-		plot_parameter(plot_id, { param: e.currentTarget.id });
-	});
+	plot_add_trigger_on_update(plot_id, show_plot);
 </script>
 {% end %}

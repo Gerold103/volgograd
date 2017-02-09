@@ -38,17 +38,16 @@ class YearPlotHandler(BaseHandler):
 		tx = None
 		try:
 			tx = yield application.begin()
-			ids = yield get_boiler_room_ids_and_titles(tx)
+			boilers = yield get_boiler_room_ids_and_titles(tx)
 			column = ['all_day_expected_temp1', ]
-			first_id = ids[0]['id']
+			first_id = boilers[0]['id']
 			first_report =\
 				yield get_boiler_year_report(tx, first_id,
 							     year, column)
 			year_temperature = yield get_year_temperature(tx, year)
-			self.render("year_plot.html", year=year,
-				    days_count=days, boiler_ids=ids,
-				    first_report=first_report,
-				    first_column=column[0],
+			self.render('year_plot.html', year=year,
+				    days_count=days, first_report=first_report,
+				    first_id=first_id, boilers=boilers,
 				    year_temperature=year_temperature)
 			tx.commit()
 		except:

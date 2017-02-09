@@ -73,7 +73,7 @@ class ShowHandler(BaseHandler):
 			# the month in the week: 0 - 6 = from
 			# monday to sunday.
 			#
-			start_week, month_range =\
+			start_week, days_count =\
 				calendar.monthrange(year, month_num)
 			month = []
 			day_iter = 1
@@ -81,15 +81,15 @@ class ShowHandler(BaseHandler):
 			# Weeks count - how many full weeks need
 			# to contain this month.
 			#
-			weeks_cnt = int((start_week + month_range) / 7)
-			if (start_week + month_range) % 7 != 0:
+			weeks_cnt = int((start_week + days_count) / 7)
+			if (start_week + days_count) % 7 != 0:
 				weeks_cnt += 1
 			for day in range(0, weeks_cnt * 7):
 				#
 				# If the day not in this month
 				# then skip it.
 				#
-				if start_week > day or day_iter > month_range:
+				if start_week > day or day_iter > days_count:
 					month.append({'day_val': ''})
 					continue
 

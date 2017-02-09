@@ -8,177 +8,126 @@
 {% end %}
 
 {% block body %}
+{% autoescape None %}
 <h1>Температура за год {{ year }}</h1>
 
 <script type="text/javascript">
-	function ideal_temperature1(x) {
-		return 67.5 - 1.5 * x;
+	var boilers = {{ json_encode(boilers) }};
+	var param_values = {{ json_encode({ first_id: first_report }) }};
+	var year_temperature = {{ json_encode(year_temperature) }};
+
+	function get_parameter_value_cb(name, day) {
+		var boiler_id = document.getElementById('plot-boiler-id').value;
+		if (! (day in param_values[boiler_id][name]))
+			return null;
+		var param = param_values[boiler_id][name][day];
+		if (param == null || !(day in year_temperature))
+			return null;
+		var t = year_temperature[day];
+		if (t == null)
+			return null;
+		return { x: t, y: param };
 	};
 
-	function ideal_temperature2(x) {
-		return 130.0/3.0 - 10.0/15.0 * x;
+	function get_ideal_water_by_air(name, air_t) {
+		/* Check if it is T1 or T2 temperature. */
+		if (name.indexOf('1') >= 0)
+			return 67.5 - 1.5 * air_t;
+		else
+			return 130.0/3.0 - 10.0/15.0 * air_t;
 	};
 
-	var params_config = {
-		'all_day_expected_temp1': {
-			'title': 'Среднесуточная температура, заданная T1',
-			'ideal': {
-				'get_y': ideal_temperature1,
-				'get_low': function(x) {
-					var y = ideal_temperature1(x);
-					return y * 0.97;
-				},
-				'get_up': function(x) {
-					var y = ideal_temperature1(x);
-					return y * 1.03;
-				},
-			}
-		},
-
-		'all_day_expected_temp2': {
-			'title': 'Среднесуточная температура, заданная T2',
-			'ideal': {
-				'get_y': ideal_temperature2,
-				'get_low': function(x) {
-					var y = ideal_temperature2(x);
-					return y * 0.97;
-				},
-				'get_up': function(x) {
-					var y = ideal_temperature2(x);
-					return y * 1.03;
-				},
-			}
-		},
-
-		'all_day_real_temp1': {
-			'title': 'Среднесуточная температура, фактическая T1',
-			'ideal': {
-				'get_y': ideal_temperature1,
-				'get_low': function(x) {
-					var y = ideal_temperature1(x);
-					return y * 0.97;
-				},
-				'get_up': function(x) {
-					var y = ideal_temperature1(x);
-					return y * 1.03;
-				},
-			}
-		},
-
-		'all_day_real_temp2': {
-			'title': 'Среднесуточная температура, фактическая T2',
-			'ideal': {
-				'get_y': ideal_temperature2,
-				'get_low': function(x) {
-					var y = ideal_temperature2(x);
-					return y * 0.97;
-				},
-				'get_up': function(x) {
-					var y = ideal_temperature2(x);
-					return y * 1.03;
-				},
-			}
-		},
-
-		'all_night_expected_temp1': {
-			'title': 'Температура ночью, заданная T1',
-			'ideal': {
-				'get_y': ideal_temperature1,
-				'get_low': function(x) {
-					var y = ideal_temperature1(x);
-					return y * 0.97;
-				},
-				'get_up': function(x) {
-					var y = ideal_temperature1(x);
-					return y * 1.03;
-				},
-			}
-		},
-
-		'all_night_expected_temp2': {
-			'title': 'Температура ночью, заданная T2',
-			'ideal': {
-				'get_y': ideal_temperature2,
-				'get_low': function(x) {
-					var y = ideal_temperature2(x);
-					return y * 0.97;
-				},
-				'get_up': function(x) {
-					var y = ideal_temperature2(x);
-					return y * 1.03;
-				},
-			}
-		},
-
-		'all_night_real_temp1': {
-			'title': 'Температура ночью, фактическая T1',
-			'ideal': {
-				'get_y': ideal_temperature1,
-				'get_low': function(x) {
-					var y = ideal_temperature1(x);
-					return y * 0.97;
-				},
-				'get_up': function(x) {
-					var y = ideal_temperature1(x);
-					return y * 1.03;
-				},
-			}
-		},
-
-		'all_night_real_temp2': {
-			'title': 'Температура ночью, фактическая T2',
-			'ideal': {
-				'get_y': ideal_temperature2,
-				'get_low': function(x) {
-					var y = ideal_temperature2(x);
-					return y * 0.97;
-				},
-				'get_up': function(x) {
-					var y = ideal_temperature2(x);
-					return y * 1.03;
-				},
-			}
-		}
+	function get_ideal_value_cb(name, day) {
+		if (! (day in year_temperature))
+			return null;
+		var t = year_temperature[day];
+		if (t == null)
+			return null;
+		return { x: t, y: get_ideal_water_by_air(name, t) };
 	};
 
-	/**
-	 * Array of air temperatures alogn the year. If the
-	 * temperature of a day is unknown then save NaN to show
-	 * gaps on the plot.
-	 */
-	var year_air_temperature = [
-		{% for day in range(1, days_count + 1) %}
-			{% if day in year_temperature and year_temperature[day] != None %}
-				{{ year_temperature[day] }},
-			{% else %}
-				NaN,
-			{% end %}
-		{% end %}
-	];
-	/**
-	 * Identifiers of all boilers and its parameters along
-	 * the year.
-	 */
-	var boiler_params = {
-		{% for item in boiler_ids %}
-			{{ item['id'] }}: {},
-		{% end %}
+	function get_ideal_up_value_cb(name, day) {
+		var res = get_ideal_value_cb(name, day);
+		if (res == null)
+			return null;
+		res.y *= 1.03;
+		return res;
 	};
-	/**
-	 * Save the first parameter to show it after the HTML page
-	 * loading.
-	 */
-	boiler_params[{{ boiler_ids[0]['id'] }}] = {
-		'{{ first_column }}': [
-			{% for day in range(1, days_count + 1) %}
-				{% if day in first_report %}
-					{{ first_report[day][first_column] }},
-				{% else %}
-					NaN,
-				{% end %}
-			{% end %}
-		]
+
+	function get_ideal_down_value_cb(name, day) {
+		var res = get_ideal_value_cb(name, day);
+		if (res == null)
+			return null;
+		res.y *= 0.97;
+		return res;
 	};
+
+	var params_config = {};
+	function add_parameter(param, title, ideal_title) {
+		params_config[param] = {
+			title: title,
+			get_value: get_parameter_value_cb,
+			color: '#8a9bff',
+			plot_type: 'bubble',
+
+			/* Data not used in plot_builder. */
+			use_in_select: true
+		};
+		params_config[param + '_ideal'] = {
+			title: ideal_title,
+			get_value: get_ideal_value_cb,
+			color: '#c3ffcd',
+			no_points: true,
+			plot_type: 'line'
+		};
+		params_config[param + '_ideal_up'] = {
+			title: ideal_title + ', оценка сверху',
+			get_value: get_ideal_up_value_cb,
+			color: '#ffbbbb',
+			no_points: true,
+			plot_type: 'line',
+			border_dash: [5, 8]
+		};
+		params_config[param + '_ideal_down'] = {
+			title: ideal_title + ', оценка снизу',
+			get_value: get_ideal_down_value_cb,
+			color: '#e4dd28',
+			no_points: true,
+			plot_type: 'line',
+			border_dash: [5, 8]
+		};
+	};
+	add_parameter('all_day_expected_temp1',
+		      'Среднесуточная температура, заданная T1',
+		      'Идеальная среднесуточная заданная T1');
+
+	add_parameter('all_day_expected_temp2',
+		      'Среднесуточная температура, заданная T2',
+		      'Идеальная среднесуточная заданная T2');
+
+	add_parameter('all_day_real_temp1',
+		      'Среднесуточная температура, фактическая T1',
+		      'Идеальная среднесуточная фактическая T1');
+
+	add_parameter('all_day_real_temp2',
+		      'Среднесуточная температура, фактическая T2',
+		      'Идеальная среднесуточная фактическая T2');
+
+	add_parameter('all_night_expected_temp1',
+		      'Температура ночью, заданная T1',
+		      'Идеальная температура ночью, заданная T1');
+
+	add_parameter('all_night_expected_temp2',
+		      'Температура ночью, заданная T2',
+		      'Идеальная температура ночью, заданная T2');
+
+	add_parameter('all_night_real_temp1',
+		      'Температура ночью, фактическая T1',
+		      'Идеальная температура ночью, фактическая T1');
+
+	add_parameter('all_night_real_temp2',
+		      'Температура ночью, фактическая T2',
+		      'Идеальная температура ночью, фактическая T2');
 </script>
 
 <div class="container plot-control-form">
@@ -198,9 +147,7 @@
 			<div class="input-group">
 				<div class="input-group-addon">Котельная</div>
 				<select class="form-control" id="plot-boiler-id">
-					{% for item in boiler_ids %}
-						<option value="{{ item['id'] }}">{{ item['title'] }}</option>
-					{% end %}
+					<!-- Render on client side. -->
 				</select>
 			</div>
 			<br><br>
@@ -215,6 +162,7 @@
 			<div class="input-group">
 				<div class="input-group-addon">Параметр</div>
 				<select class="form-control" id="plot-param">
+					<!-- Render on client side. -->
 				</select>
 			</div>
 			<br><br>
@@ -222,23 +170,75 @@
 		</div>
 	</div>
 </div>
-<div class="plot-container">
-	<canvas id="plot"></canvas>
-	<div class="chartjs-tooltip" id="plot-tooltip"></div>
-</div>
-
+<div class="plot-container"><canvas id="plot"></canvas></div>
 <script type="text/javascript">
-	var plot_id = 'plot';
-	plot_create(plot_id);
-	plot_set_title(plot_id, "{{ boiler_ids[0]['title'] }}");
-	plot_options(plot_id).hover.intersect = false;
-	plot_options(plot_id).hover.mode = 'index';
-	plot_set_xLabel(plot_id, 'Температура воздуха');
-	plot_set_yLabel(plot_id, 'Температура нагрева');
+	window.onload = function() {
+		/*
+		 * Generate boilers list.
+		 */
+		var select = document.getElementById('plot-boiler-id');
+		clear_childs(select);
+		for (var i = 0; i < boilers.length; ++i) {
+			var boiler = boilers[i];
+			var option = document.createElement('option');
+			option.setAttribute('value', boiler.id);
+			option.innerHTML = boiler.title;
+			select.appendChild(option);
+		}
 
-	function download_and_plot_parameter(control_data) {
+		/*
+		 * Generate parameters list.
+		 */
+		select = document.getElementById('plot-param');
+		clear_childs(select);
+		for (var name in params_config) {
+			if (! params_config.hasOwnProperty(name))
+				continue;
+			var param = params_config[name];
+			if (!('use_in_select' in param) || !param.use_in_select)
+				continue;
+			var option = document.createElement('option');
+			option.setAttribute('value', name);
+			option.innerHTML = param.title;
+			select.appendChild(option);
+		}
+		update_plot(plot_id);
+	};
+
+	function get_title(plot_id, control_data) {
+		return params_config[control_data.param].title;
+	};
+
+	function get_x_values(plot_id, control_data) {
+		var days = [];
+		var x_min = NaN;
+		if ('x_min' in control_data)
+			x_min = control_data.x_min;
+		var x_max = NaN;
+		if ('x_max' in control_data)
+			x_max = control_data.x_max;
+		for (var day in year_temperature) {
+			if (! year_temperature.hasOwnProperty(day))
+				continue;
+			var t = year_temperature[day];
+			if (!isNaN(x_min) && t < x_min)
+				continue;
+			if (!isNaN(x_max) && t > x_max)
+				continue;
+			days.push(day);
+		}
+		return days;
+	};
+
+	function download_and_plot_parameter(plot_id, control_data) {
 		var param = control_data.param;
 		var boiler_id = control_data.boiler_id;
+		if (boiler_id in param_values &&
+		    param in param_values[boiler_id])
+			return true;
+		if ('can_upload' in control_data && !control_data.can_upload)
+			return false;
+		console.log('donwloading ...');
 		$.ajax({
 			url: '/get_year_parameter',
 			data: { boiler_id: boiler_id, param_name: param,
@@ -251,15 +251,10 @@
 					return;
 				}
 				var resp = data['response'];
-				var values = [];
-				for (var day = 1; day <= {{ days_count }};
-				     ++day) {
-					if (day in resp)
-						values.push(resp[day][param]);
-					else
-						values.push(NaN);
-				}
-				boiler_params[boiler_id][param] = values;
+				var values = resp[param];
+				if (! (boiler_id in param_values))
+					param_values[boiler_id] = {};
+				param_values[boiler_id][param] = values;
 				/*
 				 * Forbid reuploading of the same
 				 * parameter right after it
@@ -271,74 +266,20 @@
 				 * try to plot it.
 				 */
 				control_data.can_upload = false;
-				plot_parameter(plot_id, control_data);
+				show_plot(plot_id, control_data);
 			}
 		});
+		return false;
 	};
-	function points_compare(a, b) {
-		return a.x - b.x;
+
+	function sort_dataset_by_temperature(param, dataset) {
+		/* Need for update_y_min_max(). */
+		dataset.param_name = param;
+		dataset.data.sort(function(a, b) { return a.x - b.x });
+		return true;
 	};
-	function plot_parameter(plot_id, control_data) {
-		var boiler = boiler_params[control_data.boiler_id];
-		var param_id = control_data.param;
-		var param = params_config[param_id];
-		var title = param['title'];
-		var real_values = [];
-		var ideal_values = [];
-		var ideal_values_low = [];
-		var ideal_values_up = [];
-		if (! (param_id in boiler)) {
-			if (control_data.can_upload)
-				download_and_plot_parameter(control_data);
-			return;
-		}
-		for (var day = 0; day < {{ days_count }}; ++day) {
-			var real_param = boiler[param_id][day];
-			if (isNaN(year_air_temperature[day]) ||
-			    isNaN(real_param))
-				continue;
-			var x = year_air_temperature[day];
-			if ('x_min' in control_data && x < control_data.x_min)
-				continue;
-			if ('x_max' in control_data && x > control_data.x_max)
-				continue;
-			real_values.push({ x: x, y: real_param });
-			ideal_values.push({ x: x, y: param.ideal.get_y(x) });
-			ideal_values_low.push({ x: x,
-						y: param.ideal.get_low(x) });
-			ideal_values_up.push({ x: x,
-						y: param.ideal.get_up(x) });
-		}
 
-		ideal_values.sort(points_compare);
-		ideal_values_low.sort(points_compare);
-		ideal_values_up.sort(points_compare);
-		real_values.sort(points_compare);
-
-		if (plot_is_showed(plot_id))
-			plot_destroy(plot_id);
-
-		plot_clear_data(plot_id);
-		plot_set_title(plot_id, title);
-		plot_add_data(plot_id, { label: 'Реальные значения',
-					 color: '#8a9bff', type: 'bubble',
-					 data: real_values });
-		plot_add_data(plot_id, { label: 'Идеальные значения',
-					 color: '#c3ffcd', type: 'line',
-					 data: ideal_values, no_points: true });
-		plot_add_data(plot_id, { label: 'Идеальные значения, нижняя '+
-						'граница', color: '#e4dd28',
-					 type: 'line', data: ideal_values_low,
-					 no_points: true,
-					 border_dash: [5, 8] });
-		plot_add_data(plot_id, { label: 'Идеальные значения, верхняя '+
-						'граница', color: '#ffbbbb',
-					 type: 'line', data: ideal_values_up,
-					 no_points: true,
-					 border_dash: [5, 8] });
-		plot_set_type(plot_id, 'bubble');
-		plot_show(plot_id);
-
+	function update_y_min_max(plot_id, control_data) {
 		var x_max = plot_get_x_max(plot_id);
 		var x_min = plot_get_x_min(plot_id);
 		/*
@@ -350,36 +291,50 @@
 		 * these points.
 		 */
 		var was_updated = false;
-		if (ideal_values.length > 0) {
-			if (x_min != ideal_values[0].x) {
-				real_values.unshift({x: NaN,  y: NaN});
-				ideal_values.unshift({
-					x: x_min, y: param.ideal.get_y(x_min)
-				});
-				ideal_values_low.unshift({
-					x: x_min, y: param.ideal.get_low(x_min)
-				});
-				ideal_values_up.unshift({
-					x: x_min, y: param.ideal.get_up(x_min)
-				});
+		var datasets = plot_get_datasets(plot_id);
+		var ideal_up, ideal_down, ideal, real;
+		var ideal_name, ideal_name_up, ideal_name_down, real_name;
+		for (var i = 0; i < datasets.length; ++i) {
+			var d = datasets[i];
+			if (d.param_name.indexOf('ideal_up') >= 0) {
+				ideal_up = d;
+				ideal_name_up = d.param_name;
+			} else if (d.param_name.indexOf('ideal_down') >= 0) {
+				ideal_down = d;
+				ideal_name_down = d.param_name;
+			} else if (d.param_name.indexOf('ideal') >= 0) {
+				ideal = d;
+				ideal_name = d.param_name;
+			} else {
+				real = d;
+				real_name = d.param_name;
+			}
+		}
+		if (ideal.data.length > 0) {
+			if (x_min != ideal.data[0].x) {
+				real.data.unshift({ x: NaN, y: NaN });
+				var i = get_ideal_water_by_air(ideal_name,
+							       x_min);
+				ideal.data.unshift({ x: x_min, y: i });
+				ideal_up.data.unshift({ x: x_min,
+						        y: i * 1.03 });
+				ideal_down.data.unshift({ x: x_min,
+							  y: i * 0.97 });
 				was_updated = true;
 			}
-			if (x_max != ideal_values[ideal_values.length - 1].x) {
-				real_values.push({x: NaN,  y: NaN});
-				ideal_values.push({
-					x: x_max, y: param.ideal.get_y(x_max)
-				});
-				ideal_values_low.push({
-					x: x_max, y: param.ideal.get_low(x_max)
-				});
-				ideal_values_up.push({
-					x: x_max, y: param.ideal.get_up(x_max)
-				});
+			if (x_min != ideal.data[0].x) {
+				real.data.push({ x: NaN, y: NaN });
+				var i = get_ideal_water_by_air(ideal_name,
+							       x_max);
+				ideal.data.push({ x: x_max, y: i });
+				ideal_up.data.push({ x: x_max, y: i * 1.03 });
+				ideal_down.data.push({ x: x_max, y: i * 0.97 });
 				was_updated = true;
 			}
 		}
 		if (was_updated)
 			plot_refresh(plot_id);
+		return true;
 	};
 
 	function read_params(plot_id, control_data) {
@@ -388,26 +343,25 @@
 		control_data.boiler_id = boiler_id;
 		control_data.param = param;
 		control_data.can_upload = true;
+		var show_params = [ param, param + '_ideal', param + '_ideal_up',
+				    param + '_ideal_down' ]
+		plot_update_parameters_to_show(plot_id, show_params);
+		return true;
 	};
+
+	var plot_id = 'plot';
+	plot_create(plot_id, params_config, get_title, get_x_values);
+	plot_options(plot_id).hover.intersect = false;
+	plot_options(plot_id).hover.mode = 'index';
+	plot_set_xLabel(plot_id, 'Температура воздуха');
+	plot_set_yLabel(plot_id, 'Температура нагрева');
+	plot_set_type(plot_id, 'bubble');
+	plot_add_trigger_show_started(plot_id, download_and_plot_parameter);
+	plot_add_trigger_dataset_created(plot_id, sort_dataset_by_temperature);
+	plot_add_trigger_show_finished(plot_id, update_y_min_max);
 	plot_add_trigger_on_update(plot_id, read_params);
-	plot_add_trigger_on_update(plot_id, plot_parameter);
+	plot_add_trigger_on_update(plot_id, show_plot);
 
-	window.onload = function() {
-		/* Build selector for parameters. */
-		var select_param = document.getElementById('plot-param');
-		for (var id in params_config) {
-			var param = params_config[id];
-			var option = document.createElement('option');
-			option.setAttribute('value', id);
-			option.innerHTML = param['title'];
-			select_param.appendChild(option);
-		}
-
-		/* Plot the first parameter of the first boiler. */
-		plot_parameter(plot_id, { boiler_id: {{ boiler_ids[0]['id'] }},
-					  param: "{{ first_column }}",
-					  can_upload: false });
-	};
 </script>
 
 {% end %}

@@ -144,39 +144,39 @@ def get_boiler_room_ids_and_titles(tx):
 
 ##
 # Get parameters of the specified boiler room alog the year.
-# @param tx      Current transaction.
-# @param id      Identifier of the boiler room.
-# @param year    Year along which need to gather parameters.
-# @param columns List of the table columns needed to fetch.
+# @param tx   Current transaction.
+# @param id   Identifier of the boiler room.
+# @param year Year along which need to gather parameters.
+# @param cols List of the table columns needed to fetch.
 #
-# @retval Dictionary of the following format:
-#         ...
-#         day_number: {
-#         	parameter1_of_this_day: [val1, val2, ..., val_days_count],
-#         	....
-#         	parameterN_of_this_day: [val1, val2, ..., val_days_count],
-#         },
-#         ...
+# @retval Dictionary of the following format (days are numbered
+#         from start of the year):
+# {
+# 	parameter: {
+# 		day1: val1,
+# 		day2: val2,
+# 		...
+# 	},
+# 	...
+# }
 #
 @tornado.gen.coroutine
-def get_boiler_year_report(tx, id, year, columns):
+def get_boiler_year_report(tx, id, year, cols):
 	sql = "SELECT date, {} FROM reports JOIN boiler_room_reports "\
 	      "ON(reports.id = report_id) WHERE YEAR(date) = %s AND "\
 	      "boiler_room_id = %s"\
-	      .format(",".join(columns))
+	      .format(",".join(cols))
 	params = (year, id)
 	cursor = yield tx.execute(query=sql, params=params)
-	data = cursor.fetchall()
 	res = {}
-	for row in data:
-		params = {}
-		date = row[0]
-		day = date.timetuple().tm_yday
-		i = 1
-		for col in columns:
-			params[col] = row[i]
-			i += 1
-		res[day] = params
+	for col in cols:
+		res[col] = {}
+	row = cursor.fetchone()
+	while row:
+		day = row[0].timetuple().tm_yday
+		for i, col in enumerate(cols):
+			res[col][day] = row[1 + i]
+		row = cursor.fetchone()
 	return res
 
 ##
@@ -428,8 +428,17 @@ def get_full_report_by_date(tx, date):
 	return result
 
 ##
-# Get average values of all parameters for the specified month
+# Get summary values of all parameters for the specified month
 # in all boiler rooms.
+# @retval Dictionary with the following format:
+# {
+# 	parameter: {
+# 		day1: sum in all boilers,
+# 		day2: sum in all boilers,
+# 		...
+# 	},
+# 	...
+# }
 #
 @tornado.gen.coroutine
 def get_sum_reports_by_month(tx, year, month, cols):
@@ -439,17 +448,15 @@ def get_sum_reports_by_month(tx, year, month, cols):
 	      'YEAR(date) = %s GROUP BY date;'.format(",".join(avg_list))
 	params = (month, year)
 	cursor = yield tx.execute(query=sql, params=params)
-	data = cursor.fetchall()
-	start_week, month_range = calendar.monthrange(year, month)
 	res = {}
-	for row in data:
-		params = {}
+	for col in cols:
+		res[col] = {}
+	row = cursor.fetchone()
+	while row:
 		day = row[0]
-		i = 1
-		for col in cols:
-			params[col] = row[i]
-			i += 1
-		res[day] = params
+		for i, col in enumerate(cols):
+			res[col][day] = row[1 + i]
+		row = cursor.fetchone()
 	return res
 
 ##
