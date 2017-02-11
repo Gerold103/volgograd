@@ -6,7 +6,7 @@ from datetime import date as libdate
 
 import tornado
 import tornado.gen
-from constants import date_format
+from constants import date_format, AccessError
 
 boiler_room_report_cols = [
 	'T1', 'T2', 'gas_pressure',
@@ -167,10 +167,15 @@ def get_boiler_year_report(tx, id, year, cols):
 	      "boiler_room_id = %s"\
 	      .format(",".join(cols))
 	params = (year, id)
-	cursor = yield tx.execute(query=sql, params=params)
 	res = {}
+	#
+	# Validate columns and prepare the result dictionary.
+	#
 	for col in cols:
+		if col not in boiler_room_report_cols:
+			raise AccessError('[{}]'.format(','.join(cols)))
 		res[col] = {}
+	cursor = yield tx.execute(query=sql, params=params)
 	row = cursor.fetchone()
 	while row:
 		day = row[0].timetuple().tm_yday

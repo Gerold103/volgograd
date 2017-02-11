@@ -173,11 +173,22 @@ class GetYearParameterHandler(BaseHandler):
 		tx = None
 		try:
 			tx = yield application.begin()
+			columns = [ param_name, 'T1', 'T2' ]
 			report = yield get_boiler_year_report(tx, boiler_id,
-							      year,
-							      [param_name, ])
+							      year, columns)
 			self.render_json(report)
 			tx.commit()
+		except AccessError as e:
+			logger.exception('AccessError with getting parameters')
+			if not tx:
+				logger.exception('Strange error - no '\
+						 'transaction')
+				self.render_json_error('На сервере произошла '\
+						       'ошибка, обратитесь к '\
+						       'администратору')
+			else:
+				self.render_json_error('Ошибка доступа: ' +
+						       str(e))
 		except:
 			logger.exception('Error with getting parameter')
 			if tx:

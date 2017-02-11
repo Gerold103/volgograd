@@ -15,9 +15,135 @@
 	var boilers = {{ json_encode(boilers) }};
 	var param_values = {{ json_encode({ first_id: first_report }) }};
 	var year_temperature = {{ json_encode(year_temperature) }};
+	/**
+	 * Table of temperature modes and their functions of ideal
+	 * values.
+	 * To get the ideal temperature for the given boiler and
+	 * ait temperature you need:
+	 * 1. Determine the mode of the boiler - get its T1 and T2
+	 *    columns.
+	 * 2. Call the
+	 *    ideal_values_table[mode][T1/T2](air temperature).
+	 *
+	 * Such values of function parameters are based on values
+	 * from the special table.
+	 */
+	var ideal_values_table = {
+		'150-70': {
+			T1: function(t_air) {
+				if (t_air < 3)
+					return 78.725 - 2.908 * t_air;
+				else
+					return 70;
+			},
+			T2: function(t_air) {
+				if (t_air < 3)
+					return 44.984 - 1.061 * t_air;
+				else
+					return 39.957 + 0.614 * t_air;
+			}
+		},
+		'130-70': {
+			T1: function(t_air) {
+				if (t_air < 0)
+					return 70 - 2.47 * t_air;
+				else
+					return 70;
+			},
+			T2: function(t_air) {
+				if (t_air < 0)
+					return 44.9 - t_air;
+				else
+					return 44.9 + 0.62 * t_air;
+			}
+		},
+		'120-70': {
+			T1: function(t_air) {
+				if (t_air < -2)
+					return 66.086 - 2.156 * t_air;
+				else
+					return 70;
+			},
+			T2: function(t_air) {
+				if (t_air < -2)
+					return 45.217 - 0.991 * t_air;
+				else
+					return 48.066 + 0.433 * t_air;
+			}
+		},
+		'115-70': {
+			T1: function(t_air) {
+				if (t_air < -3)
+					return 64.09 - 2.036 * t_air;
+				else
+					return 70;
+			},
+			T2: function(t_air) {
+				if (t_air < -3)
+					return 45.34 - 0.986 * t_air;
+				else
+					return 49.546 + 0.415 * t_air;
+			}
+		},
+		'110-70': {
+			T1: function(t_air) { return 59.928 - 2.002 * t_air; },
+			T2: function(t_air) { return 43.214 - 1.071 * t_air; }
+		},
+		'105-70': {
+			T1: function(t_air) { return 58.142 - 1.874 * t_air; },
+			T2: function(t_air) { return 43.428 - 1.062 * t_air; }
+		},
+		'95-70': {
+			T1: function(t_air) { return 53.642 - 1.654 * t_air; },
+			T2: function(t_air) { return 43.214 - 1.071 * t_air; }
+		}
+	};
+
+	/** Get identifier of the currently selected boiler. */
+	function get_current_boiler() {
+		return document.getElementById("plot-boiler-id").value;
+	};
+
+	/**
+	 * Get functions to calculate the ideal temperatures for
+	 * the currently selected boiler.
+	 * @retval not null Dictionary with T1 and T2 keys and
+	 *                  functions as values,
+	 *                  @sa ideal_values_table.
+	 * @retval     null Mode not found the current boiler.
+	 */
+	function get_boiler_mode() {
+		var boiler_id = get_current_boiler();
+		var params = param_values[boiler_id];
+		if (!('T1' in params) || !('T2' in params))
+			return null;
+		var t1_vals = params['T1'];
+		var t2_vals = params['T2'];
+		var t1 = null, t2 = null;
+		for (var day in t1_vals) {
+			if (t1_vals[day] != null) {
+				t1 = t1_vals[day];
+				break;
+			}
+		}
+		if (t1 == null)
+			return null;
+		for (var day in t2_vals) {
+			if (t2_vals[day] != null) {
+				t2 = t2_vals[day];
+				break;
+			}
+		}
+		if (t2 == null)
+			return null;
+		var mode = t1.toString() + '-' + t2.toString();
+		if (! (mode in ideal_values_table))
+			return null;
+		return ideal_values_table[mode];
+	};
 
 	function get_parameter_value_cb(name, day) {
-		var boiler_id = document.getElementById('plot-boiler-id').value;
+		var boiler_id = get_current_boiler();
 		if (! (day in param_values[boiler_id][name]))
 			return null;
 		var param = param_values[boiler_id][name][day];
@@ -30,11 +156,14 @@
 	};
 
 	function get_ideal_water_by_air(name, air_t) {
+		var mode = get_boiler_mode();
+		if (mode == null)
+			return null;
 		/* Check if it is T1 or T2 temperature. */
 		if (name.indexOf('1') >= 0)
-			return 67.5 - 1.5 * air_t;
+			return mode.T1(air_t);
 		else
-			return 130.0/3.0 - 10.0/15.0 * air_t;
+			return mode.T2(air_t);
 	};
 
 	function get_ideal_value_cb(name, day) {
@@ -43,7 +172,10 @@
 		var t = year_temperature[day];
 		if (t == null)
 			return null;
-		return { x: t, y: get_ideal_water_by_air(name, t) };
+		var y = get_ideal_water_by_air(name, t);
+		if (y == null)
+			return null;
+		return { x: t, y: y };
 	};
 
 	function get_ideal_up_value_cb(name, day) {
@@ -255,6 +387,8 @@
 				if (! (boiler_id in param_values))
 					param_values[boiler_id] = {};
 				param_values[boiler_id][param] = values;
+				param_values[boiler_id]['T1'] = resp['T1'];
+				param_values[boiler_id]['T2'] = resp['T2'];
 				/*
 				 * Forbid reuploading of the same
 				 * parameter right after it
@@ -280,6 +414,12 @@
 	};
 
 	function update_y_min_max(plot_id, control_data) {
+		/*
+		 * If mode for the boiler not found then don't
+		 * update the plot.
+		 */
+		if (get_boiler_mode() == null)
+			return true;
 		var x_max = plot_get_x_max(plot_id);
 		var x_min = plot_get_x_min(plot_id);
 		/*
@@ -322,7 +462,7 @@
 							  y: i * 0.97 });
 				was_updated = true;
 			}
-			if (x_min != ideal.data[0].x) {
+			if (x_max != ideal.data[ideal.data.length - 1].x) {
 				real.data.push({ x: NaN, y: NaN });
 				var i = get_ideal_water_by_air(ideal_name,
 							       x_max);
@@ -338,7 +478,7 @@
 	};
 
 	function read_params(plot_id, control_data) {
-		var boiler_id = document.getElementById("plot-boiler-id").value;
+		var boiler_id = get_current_boiler();
 		var param = document.getElementById("plot-param").value;
 		control_data.boiler_id = boiler_id;
 		control_data.param = param;

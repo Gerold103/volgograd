@@ -39,7 +39,7 @@ class YearPlotHandler(BaseHandler):
 		try:
 			tx = yield application.begin()
 			boilers = yield get_boiler_room_ids_and_titles(tx)
-			column = ['all_day_expected_temp1', ]
+			column = ['all_day_expected_temp1', 'T1', 'T2' ]
 			first_id = boilers[0]['id']
 			first_report =\
 				yield get_boiler_year_report(tx, first_id,

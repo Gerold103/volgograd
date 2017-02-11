@@ -37,3 +37,9 @@ wind_directions = {
 }
 
 date_format = '%d.%m.%Y'
+
+class AccessError(Exception):
+	def __init__(self, access_to_what):
+		message = 'Доступ к ресурсам {} '\
+			  'запрещен'.format(access_to_what)
+		super(AccessError, self).__init__(message)

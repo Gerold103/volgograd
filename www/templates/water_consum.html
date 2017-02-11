@@ -147,7 +147,7 @@
 				     ++day) {
 					var val = child.get_value(ch_name, day);
 					td = document.createElement('td');
-					if (val == null)
+					if (val == null || val != val)
 						td.innerHTML = '-';
 					else
 						td.innerHTML = val.toFixed(2);
