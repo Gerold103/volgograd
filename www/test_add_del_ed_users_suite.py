@@ -47,7 +47,6 @@ class TestSuiteAddEditDeleteUsers(BaseTestSuite):
 		application.connect_db()
 
 		tx = yield application.begin()
-		#yield prepare_tests(tx, sc.db_name, sc.test_db_name)
 
 		for user in test_duplicate_users:
 			psw = user['password']
