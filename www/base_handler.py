@@ -13,6 +13,12 @@ from constants import *
 #
 class BaseHandler(tornado.web.RequestHandler):
 	##
+	# Redefine render method to add rights constants.
+	#
+	def render(self, *args, **kwargs):
+		return super(BaseHandler, self).render(*args, **kwargs,
+						       **rights_dictionary)
+	##
 	# User cookies are: user_id, rights. This methods return user_id.
 	#
 	def get_current_user(self):

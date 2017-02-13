@@ -32,7 +32,7 @@ from test_login_logout_suite import TestSuiteLoginLogout
 class MainHandler(BaseHandler):
 	@tornado.web.authenticated
 	def get(self):
-		self.render("index.html", **rights_dictionary)
+		self.render("index.html")
 
 ##
 # Login a not authorized user.

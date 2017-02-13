@@ -63,7 +63,7 @@
 			</div>
 		</div>
 	{% end %}
-	{% if enable_delete %}
+	{% if current_user['rights'] & CAN_DELETE_REPORTS %}
 		<div class="container-fluid report-actions-panel" align="right">
 			<a class="btn btn-danger" href="/drop_report?date={{ date }}" onclick="return confirm('Вы уверены? Действие нельзя будет отменить!')">Удалить отчет</a>
 		</div>
