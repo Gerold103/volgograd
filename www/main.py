@@ -25,6 +25,7 @@ from constants import *
 
 from tests_prepare_suite     import AAA_TestSuitePrepare
 from test_login_logout_suite import TestSuiteLoginLogout
+from test_users_management   import TestSuiteUsersManagement
 
 ##
 # Main page render.

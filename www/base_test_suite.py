@@ -44,7 +44,7 @@ test_users = [
 		'email': 'testmail5@mail.ru',
 		'name': 'Mr.Admin',
 		'rights': CAN_SEE_REPORTS | CAN_UPLOAD_REPORTS |
-			  CAN_DELETE_REPORTS,
+			  CAN_DELETE_REPORTS | CAN_SEE_USERS | CAN_EDIT_USERS,
 		'password': '111111'
 	}
 ]
