@@ -19,6 +19,7 @@ from show_handler         import ShowHandler
 from water_consum_handler import WaterConsumHandler
 from year_plot_handler    import YearPlotHandler
 from temperature_handler  import TemperatureHandler
+from users_management     import UsersManagementHandler
 from query import *
 from constants import *
 
@@ -31,7 +32,7 @@ from test_login_logout_suite import TestSuiteLoginLogout
 class MainHandler(BaseHandler):
 	@tornado.web.authenticated
 	def get(self):
-		self.render("index.html")
+		self.render("index.html", **rights_dictionary)
 
 ##
 # Login a not authorized user.
@@ -295,7 +296,8 @@ if __name__ == "__main__":
 		(r'/year_plot', YearPlotHandler),
 		(r'/get_year_parameter', GetYearParameterHandler),
 		(r'/temperature', TemperatureHandler),
-		(r'/get_month_parameter', GetMonthParameterHandler)
+		(r'/get_month_parameter', GetMonthParameterHandler),
+		(r'/users_management', UsersManagementHandler)
 	]
 	application.template_path = 'templates/'
 	application.static_path = 'static/'

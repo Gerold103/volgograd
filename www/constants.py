@@ -19,6 +19,23 @@ ERR_MESSAGES = {
 CAN_UPLOAD_REPORTS = 0x01
 CAN_SEE_REPORTS = 0x02
 CAN_DELETE_REPORTS = 0x04
+CAN_SEE_USERS = 0x08
+CAN_EDIT_USERS = 0x10
+
+##
+# If in a html template you need to check the user rights, then
+# pass this dictionary as kwargs argument to the template render,
+# and then you can check rights like the following:
+#
+# 	current_user['rights'] & any_rights_you_need
+#
+rights_dictionary = {
+	'CAN_UPLOAD_REPORTS': CAN_UPLOAD_REPORTS,
+	'CAN_SEE_REPORTS': CAN_SEE_REPORTS,
+	'CAN_DELETE_REPORTS': CAN_DELETE_REPORTS,
+	'CAN_SEE_USERS': CAN_SEE_USERS,
+	'CAN_EDIT_USERS': CAN_EDIT_USERS
+}
 
 month_names = ['Январь', 'Февраль', 'Март', 'Апрель', 'Май',
 	       'Июнь', 'Июль', 'Август', 'Сентябрь', 'Октябрь',

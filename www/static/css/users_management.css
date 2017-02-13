@@ -1,0 +1,7 @@
+#user-password, #user-password-repeat {
+	width: 300px;
+}
+
+#alert-on-error {
+	display: none;
+}

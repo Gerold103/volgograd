@@ -1,0 +1,184 @@
+{% extends "base.html" %}
+
+{% block title %}ВолКомХоз: Управление пользователями{% end %}
+
+{% block links %}
+<link rel="stylesheet" href="{{ static_url('css/users_management.css') }}">
+{% end %}
+
+{% block body %}
+
+{% set enable_edit = current_user['rights'] & CAN_EDIT_USERS %}
+
+<div class="container-fluid">
+
+	<h1>Управление пользователями</h1>
+	{% try %}
+		{% if user_was_created %}
+			<!-- Label for testing: user_was_created -->
+			<div class="alert alert-success alert-dismissible">
+				<button type="button" class="close" data-dismiss="alert">
+					<span aria-hidden="true">&times;</span>
+				</button>
+				Пользователь создан!
+			</div>
+		{% end %}
+	{% except %}
+	{% end %}
+
+	{% if enable_edit %}
+		<button class="btn btn-primary btn-lg" onclick="open_modal_to_create_user();">
+			Добавить пользователя
+		</button>
+	{% end %}
+</div>
+
+{% if enable_edit %}
+
+<div class="modal fade user-modal-window" id="user-modal" tabindex="-1" aria-labelledby="modal-title">
+	<div class="modal-dialog">
+		<div class="modal-content">
+
+			<div class="modal-header">
+				<button type="button" class="close" data-dismiss="modal">
+					<span aria-hidden="true">&times;</span>
+				</button>
+				<h4 class="modal-title" id="modal-title">
+					<!-- Redefine this before the window showing. -->
+					Действие с пользователем
+				</h4>
+			</div>
+
+			<div class="modal-body">
+				<div class="alert alert-danger alert-dismissible" id="alert-on-error">
+					<button type="button" class="close" data-dismiss="alert">
+						<span aria-hidden="true">&times;</span>
+					</button>
+					<span id="alert-on-error-text"></span>
+				</div>
+
+				<form id="user-data-form" action="/users_management" method="post">
+					<div class="form-group">
+						<label for="user-email" class="control-label">
+							Электронная почта:
+						</label>
+						<input type="email" class="form-control" id="user-email" name="email" placeholder="example@mail.ru" required>
+					</div>
+					<div class="form-group">
+						<label for="user-name" class="control-label">
+							Имя:
+						</label>
+						<input type="text" class="form-control" id="user-name" name="name" placeholder="Петров Василий Иванович">
+					</div>
+					<div class="form-group">
+						<label class="control-label" for="user-rights">
+							Права:
+						</label>
+						<div id="user-rights">
+							<div>
+								<input type="checkbox" name="see_reports" autocomplete="off" checked> Просмотр отчетов
+							</div>
+							<div>
+								<input type="checkbox" name="upload_reports"> Загрузка отчетов
+							</div>
+							<div>
+								<input type="checkbox" name="delete_reports"> Удаление отчетов
+							</div>
+							<div>
+								<input type="checkbox" name="see_users"> Просмотр пользователей
+							</div>
+							<div>
+								<input type="checkbox" name="edit_users"> Редактирование пользователей
+							</div>
+						</div>
+					</div>
+					<div class="form-group">
+						<label for="user-password" class="control-label">
+							Пароль:
+						</label>
+						<input type="password" class="form-control" id="user-password" name="password" required>
+					</div>
+					<div class="form-group">
+						<label for="user-password-repeat" class="control-label">
+							Повторите пароль:
+						</label>
+						<input type="password" class="form-control" id="user-password-repeat" name="password-repeat" required>
+					</div>
+					<input type="hidden" id="user-action" name="action" value="">
+				</form>
+			</div>
+
+			<div class="modal-footer">
+				<button type="button" class="btn btn-default" data-dismiss="modal">Закрыть</button>
+				<button type="button" class="btn btn-primary" onclick="save_user();">
+					Сохранить
+				</button>
+			</div>
+		</div>
+	</div>
+</div>
+
+
+<script type="text/javascript">
+	function set_modal_title(title) {
+		document.getElementById('modal-title').innerHTML = title;
+	};
+
+	function open_modal_to_create_user() {
+		set_modal_title('Создание пользователя');
+		document.getElementById('user-action').value = 'create';
+		$('#user-modal').modal();
+	};
+
+	function show_alert(text) {
+		$('#alert-on-error').show();
+		$('#alert-on-error-text').text(text);
+	};
+
+	var max_email_length = {{ max_email_len }};
+	var max_name_length = {{ max_name_len }};
+	var min_password_length = {{ min_password_len }};
+	var max_password_length = {{ max_password_len }};
+	var email_reg = new RegExp('{{ email_format }}');
+
+	function save_user() {
+		$('#alert-on-error').hide();
+		var email    = document.getElementById('user-email').value;
+		var name     = document.getElementById('user-name').value;
+		var password = document.getElementById('user-password').value;
+		var password_repeat =
+			document.getElementById('user-password-repeat').value;
+		if (password.length < min_password_length ||
+		    password.length > max_password_length) {
+			show_alert('{{ password_len_err }}');
+			return;
+		}
+		if (password != password_repeat) {
+			show_alert('{{ password_match_err }}');
+			return;
+		}
+		if (email.length > max_email_length) {
+			show_alert('{{ email_len_err }}');
+			return;
+		}
+		if (! email_reg.test(email)) {
+			show_alert('{{ email_format_err }}');
+			return;
+		}
+		if (name.length > max_name_length) {
+			show_alert('{{ name_len_err }}');
+			return;
+		}
+		document.getElementById('user-data-form').submit();
+	};
+</script>
+
+{% end %} {% comment : End of the modal if edit is enabled. %}
+
+<div class="container-fluid">
+	<div class="alert alert-warning alert-dismissible">
+		Раздел просмотра пользователей находится в разработке...
+	</div>
+</div>
+
+{% end %}

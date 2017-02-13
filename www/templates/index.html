@@ -5,8 +5,24 @@
 {% block body %}
 
 <div class="container-fluid main-menu" align="center">
-	<a href="/upload" class="btn btn-default btn-lg btn-block">Загрузить файл</a>
-	<a href="/show_table" class="btn btn-default btn-lg btn-block">Посмотреть таблицу за день</a>
+	{% set something_was_showed = False %}
+	{% if current_user['rights'] & CAN_UPLOAD_REPORTS %}
+		<a href="/upload" class="btn btn-default btn-lg btn-block">Загрузить файл</a>
+		{% set something_was_showed = True %}
+	{% end %}
+	{% if current_user['rights'] & CAN_SEE_REPORTS %}
+		<a href="/show_table" class="btn btn-default btn-lg btn-block">Посмотреть таблицу за день</a>
+		{% set something_was_showed = True %}
+	{% end %}
+	{% if current_user['rights'] & CAN_SEE_USERS %}
+		<a href="/users_management" class="btn btn-default btn-lg btn-block">Пользователи</a>
+		{% set something_was_showed = True %}
+	{% end %}
+	{% if not something_was_showed %}
+		<div class="alert alert-danger alert-dismissible">
+			У вас нет прав ни на какие действия
+		</div>
+	{% end %}
 </div>
 
 {% end %}
