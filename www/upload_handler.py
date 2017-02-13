@@ -155,7 +155,6 @@ class UploadHandler(BaseHandler):
 			      .format(e.row, e.column, words, e.real)
 			self.rollback_error(tx, e_hdr=ERR_INSERT, e_msg=msg)
 		except Exception as e:
-			logger.exception("Error with uploading report")
 			if len(e.args) > 0 and e.args[0] == DUPLICATE_ERROR:
 				self.rollback_error(tx,
 						    e_hdr=ERR_INSERT,
@@ -163,6 +162,7 @@ class UploadHandler(BaseHandler):
 						    	  'идентификатором уже'\
 							  ' существует')
 			else:
+				logger.exception("Error with uploading report")
 				self.rollback_error(tx, e_hdr=ERR_500)
 		else:
 			yield tx.commit()
