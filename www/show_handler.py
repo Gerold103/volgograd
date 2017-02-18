@@ -162,4 +162,5 @@ class ShowHandler(BaseHandler):
 			self.render('show_table.html', **report,
 				    get_val=get_html_val,
 				    get_date=get_str_date,
-				    wind_directions=wind_directions)
+				    wind_directions=wind_directions,
+				    CONFIRM_DELETE=CONFIRM_DELETE)

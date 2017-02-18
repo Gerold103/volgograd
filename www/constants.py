@@ -22,6 +22,8 @@ CAN_DELETE_REPORTS = 0x04
 CAN_SEE_USERS = 0x08
 CAN_EDIT_USERS = 0x10
 
+CONFIRM_DELETE = 'Вы уверены? Действие нельзя будет отменить.'
+
 ##
 # If in a html template you need to check the user rights, then
 # you can use the following syntax:
