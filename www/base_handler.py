@@ -84,7 +84,7 @@ class BaseHandler(tornado.web.RequestHandler):
 	#
 	@tornado.web.authenticated
 	def check_rights(self, rights, render=True):
-		user_rights = int(self.get_secure_cookie('rights'))
+		user_rights = self.current_user['rights']
 		if not (rights & user_rights):
 			if render:
 				self.render_error(e_hdr=ERR_ACCESS,
