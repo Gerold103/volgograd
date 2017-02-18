@@ -39,7 +39,7 @@ test_error_users = [
 		'error': ERR_EMAIL_LENGTH
 	},
 #
-# Name error.
+# Name errors.
 #
 	{
 		'email': 'email@mail.ru',
@@ -48,6 +48,14 @@ test_error_users = [
 		'password': '123456',
 		'password-repeat': '123456',
 		'error': ERR_NAME_LENGTH
+	},
+	{
+		'email': 'email@mail.ru',
+		'name': 'John Doe <script>alert("error!");</script>',
+		'see_reports': 'on',
+		'password': '123456',
+		'password-repeat': '123456',
+		'error': ERR_NAME_FORMAT
 	},
 #
 # Password errors.
@@ -148,6 +156,20 @@ test_normal_users = [
 	{
 		'email': 'email5@corp.mail.ru',
 		'name': 'John Doe 5',
+		'see_reports': 'on',
+		'password': '123456',
+		'password-repeat': '123456'
+	},
+	{
+		'email': 'email6@corp.mail.ru',
+		'name': 'John D.-M. 59 Алексеев',
+		'see_reports': 'on',
+		'password': '123456',
+		'password-repeat': '123456'
+	},
+	{
+		'email': 'email7@corp.mail.ru',
+		'name': '', # Zero length name is allowed.
 		'see_reports': 'on',
 		'password': '123456',
 		'password-repeat': '123456'

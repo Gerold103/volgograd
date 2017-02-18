@@ -27,6 +27,8 @@ ERR_RIGHTS_COMBINATION = 'Несовместимый набор прав пол�
 
 ERR_NAME_LENGTH = 'Длина имени не должна превышать {} '\
 		  'символов'.format(MAX_NAME_LENGTH)
+ERR_NAME_FORMAT = 'Имя некорректно'
+NAME_FORMAT = '^[a-zA-Z_а-яА-Я- .0-9]*$'
 
 ERR_EMAIL_ABSENSE = 'Не указан адрес почты'
 ERR_EMAIL_LENGTH = 'Длина адреса почты не должна превышать {} '\
@@ -34,6 +36,7 @@ ERR_EMAIL_LENGTH = 'Длина адреса почты не должна пре�
 ERR_EMAIL_FORMAT = 'Адрес почты некорректен'
 EMAIL_FORMAT = '^[a-zA-Z0-9_.+-]+@[a-zA-Z0-9-]+\.[a-zA-Z0-9-.]+$'
 email_validator = re.compile(EMAIL_FORMAT)
+name_validator = re.compile(NAME_FORMAT)
 
 users_management_params = {
 	'max_name_len'       : MAX_NAME_LENGTH,
@@ -44,6 +47,8 @@ users_management_params = {
 	'email_format_err'   : ERR_EMAIL_FORMAT,
 	'email_format'       : EMAIL_FORMAT,
 	'name_len_err'       : ERR_NAME_LENGTH,
+	'name_format_err'    : ERR_NAME_FORMAT,
+	'name_format'        : NAME_FORMAT,
 	'password_len_err'   : ERR_PASSWORD_LENGTH,
 	'password_match_err' : ERR_PASSWORD_MATCH
 }
@@ -80,6 +85,9 @@ class UsersManagementHandler(BaseHandler):
 			name = None
 		if name and len(name) > MAX_NAME_LENGTH:
 			self.render_error(ERR_PARAMETERS, ERR_NAME_LENGTH)
+			return
+		if name and not name_validator.fullmatch(name):
+			self.render_error(ERR_PARAMETERS, ERR_NAME_FORMAT)
 			return
 		#
 		# Check password correctness.

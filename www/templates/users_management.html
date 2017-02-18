@@ -140,6 +140,7 @@
 	var min_password_length = {{ min_password_len }};
 	var max_password_length = {{ max_password_len }};
 	var email_reg = new RegExp('{{ email_format }}');
+	var name_reg = new RegExp('{{ name_format }}');
 
 	function save_user() {
 		$('#alert-on-error').hide();
@@ -167,6 +168,10 @@
 		}
 		if (name.length > max_name_length) {
 			show_alert('{{ name_len_err }}');
+			return;
+		}
+		if (! name_reg.test(name)) {
+			show_alert('{{ name_format_err }}');
 			return;
 		}
 		document.getElementById('user-data-form').submit();
