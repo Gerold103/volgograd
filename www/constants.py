@@ -24,10 +24,12 @@ CAN_EDIT_USERS = 0x10
 
 ##
 # If in a html template you need to check the user rights, then
-# pass this dictionary as kwargs argument to the template render,
-# and then you can check rights like the following:
+# you can use the following syntax:
 #
 # 	current_user['rights'] & any_rights_you_need
+#
+# It is possible since we are passing the rigts dictionary to
+# each template in BaseHandler.
 #
 rights_dictionary = {
 	'CAN_UPLOAD_REPORTS': CAN_UPLOAD_REPORTS,

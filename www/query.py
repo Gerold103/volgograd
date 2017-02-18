@@ -467,7 +467,7 @@ def get_sum_reports_by_month(tx, year, month, cols):
 ##
 # Get a user by the specified email.
 # @param tx    Current transaction.
-# @param cols  String with columns separated by commas: 'id, name, ...'.
+# @param cols  List of columns to fetch.
 # @param email Email of the user.
 #
 # @retval Tuple with specified columns or the empty tuple.
