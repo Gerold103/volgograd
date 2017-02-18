@@ -25,7 +25,7 @@ class BaseHandler(tornado.web.RequestHandler):
 		user_id = self.get_secure_cookie('user_id', None)
 		if not user_id:
 			return None
-		user = {'user_id': user_id}
+		user = {'user_id': int(user_id)}
 		user['rights'] = int(self.get_secure_cookie('rights'))
 		user['user_name'] = self.get_secure_cookie('user_name', None)
 		if user['user_name']:
