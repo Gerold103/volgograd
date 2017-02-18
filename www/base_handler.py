@@ -92,6 +92,28 @@ class BaseHandler(tornado.web.RequestHandler):
 			return False
 		return True
 
+	##
+	# Reset the cookies of the current user. If a user_name
+	# cookie is None, then it is deleted.
+	# @param rights    Rights mask.
+	# @param user_name Name of the user.
+	#
+	def update_cookies(self, rights, user_name):
+		#
+		# Rights specifies which actions the user can
+		# execute.
+		#
+		self.set_secure_cookie('rights', str(rights), expires_days=1)
+		if not user_name:
+			self.clear_cookie('user_name')
+		else:
+			self.set_secure_cookie('user_name', user_name,
+					       expires_days=1)
+		if self.current_user:
+			self.current_user['rights'] = rights
+			if user_name:
+				self.current_user['user_name'] = user_name
+
 ##
 # Decorator to check rights mask.
 # @sa constants.py

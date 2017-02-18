@@ -98,14 +98,7 @@ class LoginHandler(BaseHandler):
 			#
 			self.set_secure_cookie('user_id', str(user_id),
 					       expires_days=1)
-			#
-			# Rights specifies which actions the user can execute.
-			#
-			self.set_secure_cookie('rights', str(rights),
-					       expires_days=1)
-			if user_name:
-				self.set_secure_cookie('user_name', user_name,
-						       expires_days=1)
+			self.update_cookies(rights, user_name)
 			yield tx.commit()
 		except Exception as e:
 			logger.exception('Error during login')
