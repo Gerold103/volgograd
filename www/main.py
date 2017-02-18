@@ -43,7 +43,7 @@ class LoginHandler(BaseHandler):
 	# Show login page, if the current user is not already authorized.
 	#
 	def get(self):
-		if self.get_current_user():
+		if self.current_user:
 			self.render_error(e_hdr=ERR_LOGIN,
 					  e_msg='Вы уже авторизованы')
 			return
@@ -51,7 +51,7 @@ class LoginHandler(BaseHandler):
 
 	@tornado.gen.coroutine
 	def post(self):
-		if self.get_current_user():
+		if self.current_user:
 			self.render_error(e_hdr=ERR_LOGIN,
 					  e_msg='Вы уже авторизованы')
 			return

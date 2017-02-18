@@ -157,9 +157,8 @@ class ShowHandler(BaseHandler):
 			else:
 				self.rollback_error(tx, e_hdr=ERR_500)
 		else:
-			user = self.get_current_user()
-			assert(user)
-			assert('rights' in user)
+			assert(self.current_user)
+			assert('rights' in self.current_user)
 			self.render('show_table.html', **report,
 				    get_val=get_html_val,
 				    get_date=get_str_date,
