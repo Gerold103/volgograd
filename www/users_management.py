@@ -96,7 +96,7 @@ class UsersManagementHandler(BaseHandler):
 			users = yield get_users_range(tx, limit, offset,
 						      columns)
 			count = len(users)
-			if count == 0 and 'user_was_deleted' not in kwargs:
+			if count == 0 and not kwargs['user_was_deleted']:
 				self.rollback_error(tx, ERR_PARAMETERS,
 						    ERR_PAGE_NUMBER)
 				return
