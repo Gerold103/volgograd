@@ -206,6 +206,8 @@ class TestSuiteUsersManagement(BaseTestSuite):
 	def post_user(self, user):
 		logged = yield self.get_logged()
 		client = self.get_client()
+		user = dict(user)
+		user['action'] = 'create'
 		body = urllib.parse.urlencode(user)
 		headers = logged['headers']
 		response = yield client.fetch(self.get_url('/users_management'),

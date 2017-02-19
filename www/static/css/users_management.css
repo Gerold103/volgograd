@@ -5,3 +5,49 @@
 #alert-on-error {
 	display: none;
 }
+
+.user-rights-designations > label {
+	display: block;
+	text-decoration: underline;
+}
+
+.rights-icon {
+	white-space:nowrap;
+}
+
+.upload-reports-icon > .glyphicon-save-file {
+	color: #5bc0de;
+}
+
+.see-reports-icon > .glyphicon-list-alt,
+.drop-reports-icon > .glyphicon-list-alt,
+.drop-reports-icon > .glyphicon-wrench {
+	color: #848484;
+}
+
+.drop-reports-icon > .glyphicon-wrench {
+	color: #848484;
+	right: 12px;
+	margin-right: -12px;
+	top: 5px;
+}
+
+.edit-users-icon > .glyphicon-wrench {
+	right: 12px;
+	margin-right: -12px;
+	top: 5px;
+}
+
+.rights-column {
+	display: inline-block;
+	width: 20px;
+	text-align: center;
+}
+
+.user-actions > .btn-info {
+	margin-right: 15px;
+}
+
+.user-actions > .btn-danger {
+	margin-left: 15px;
+}

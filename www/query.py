@@ -276,6 +276,21 @@ def insert_user(tx, email, password, salt, name, rights):
 	yield tx.execute(query=sql, params=params)
 
 ##
+# Update the user by his identifier.
+#
+@tornado.gen.coroutine
+def update_user(tx, id, email, password, salt, name, rights):
+	sql = "UPDATE users SET email = %s, name = %s, rights = %s"
+	params = [email, name, rights]
+	# Password update is optional.
+	if password and salt:
+		params.extend([password, salt])
+		sql += ", password = %s, salt = %s"
+	sql += " WHERE id = %s"
+	params.append(id)
+	yield tx.execute(query=sql, params=params)
+
+##
 # Get a value from iterable object by name, or None, if the object doesn't
 # contain the name.
 #
@@ -478,6 +493,41 @@ def get_user_by_email(tx, cols, email):
 	params = (email, )
 	cursor = yield tx.execute(query=sql, params=params)
 	return cursor.fetchone()
+
+##
+# Get range of users with the specified offset and limit.
+# @param tx     Current transaction.
+# @param limit  Limit of users to fetch.
+# @param Offset Offset from the begin of all users list, ordered
+#               by name.
+# @param cols   List of columns to fetch.
+#
+# @retval List with the following format: [ { column values dictionary }, ... ].
+#
+@tornado.gen.coroutine
+def get_users_range(tx, limit, offset, cols):
+	sql = 'SELECT {} FROM users ORDER BY name IS NULL, name ASC, email '\
+	      'LIMIT %s OFFSET %s'.format(','.join(cols))
+	params = (limit, offset)
+	cursor = yield tx.execute(query=sql, params=params)
+	row = cursor.fetchone()
+	res = []
+	while row:
+		next = {}
+		for i, col in enumerate(cols):
+			next[col] = row[i]
+		res.append(next)
+		row = cursor.fetchone()
+	return res
+
+##
+# Delete the user with the specified ID.
+#
+@tornado.gen.coroutine
+def delete_user_by_id(tx, id):
+	sql = 'DELETE FROM users WHERE id = %s'
+	params = (id, )
+	cursor = yield tx.execute(query=sql, params=params)
 
 ##
 # Switch the active database on the test database. Then clear it

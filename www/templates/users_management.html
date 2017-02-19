@@ -9,21 +9,29 @@
 {% block body %}
 
 {% set enable_edit = current_user['rights'] & CAN_EDIT_USERS %}
-
 <div class="container-fluid">
-
-	<h1>Управление пользователями</h1>
-	{% try %}
-		{% if user_was_created %}
-			<!-- Label for testing: user_was_created -->
-			<div class="alert alert-success alert-dismissible">
-				<button type="button" class="close" data-dismiss="alert">
-					<span aria-hidden="true">&times;</span>
-				</button>
+	{% if enable_edit %}
+		<h1>Управление пользователями</h1>
+	{% else %}
+		<h1>Пользователи</h1>
+	{% end %}
+	{% if user_was_created or user_was_deleted or user_was_edited %}
+		<div class="alert alert-success alert-dismissible">
+			<button type="button" class="close" data-dismiss="alert">
+				<span aria-hidden="true">&times;</span>
+			</button>
+			{% if user_was_created %}
+				<!-- Label for testing: user_was_created -->
 				Пользователь создан!
-			</div>
-		{% end %}
-	{% except %}
+			{% elif user_was_deleted %}
+				<!-- Label for testing: user_was_deleted -->
+				Пользователь удален!
+			{% elif user_was_edited %}
+				<!-- Label for testing: user_was_edited -->
+				Пользователь отредактирован!
+			{% end %}
+
+		</div>
 	{% end %}
 
 	{% if enable_edit %}
@@ -50,14 +58,11 @@
 			</div>
 
 			<div class="modal-body">
-				<div class="alert alert-danger alert-dismissible" id="alert-on-error">
-					<button type="button" class="close" data-dismiss="alert">
-						<span aria-hidden="true">&times;</span>
-					</button>
-					<span id="alert-on-error-text"></span>
+				<div id="alert-on-error">
+					<!-- Redefine this on each error. -->
 				</div>
 
-				<form id="user-data-form" action="/users_management" method="post">
+				<form id="user-data-form" action="/users_management?page={{ page }}" method="post">
 					<div class="form-group">
 						<label for="user-email" class="control-label">
 							Электронная почта:
@@ -76,35 +81,41 @@
 						</label>
 						<div id="user-rights">
 							<div>
-								<input type="checkbox" name="see_reports" autocomplete="off" checked> Просмотр отчетов
+								<input type="checkbox" name="see_reports" id="user-see_reports" autocomplete="off" checked>
+								Просмотр отчетов
 							</div>
 							<div>
-								<input type="checkbox" name="upload_reports"> Загрузка отчетов
+								<input type="checkbox" name="upload_reports" id="user-upload_reports">
+								Загрузка отчетов
 							</div>
 							<div>
-								<input type="checkbox" name="delete_reports"> Удаление отчетов
+								<input type="checkbox" name="delete_reports" id="user-delete_reports">
+								Удаление отчетов
 							</div>
 							<div>
-								<input type="checkbox" name="see_users"> Просмотр пользователей
+								<input type="checkbox" name="see_users" id="user-see_users">
+								Просмотр пользователей
 							</div>
 							<div>
-								<input type="checkbox" name="edit_users"> Редактирование пользователей
+								<input type="checkbox" name="edit_users" id="user-edit_users">
+								Редактирование пользователей
 							</div>
 						</div>
 					</div>
 					<div class="form-group">
-						<label for="user-password" class="control-label">
+						<label for="user-password" id="user-password-label" class="control-label">
 							Пароль:
 						</label>
 						<input type="password" class="form-control" id="user-password" name="password" required>
 					</div>
 					<div class="form-group">
-						<label for="user-password-repeat" class="control-label">
+						<label for="user-password-repeat" id="user-password-repeat-label" class="control-label">
 							Повторите пароль:
 						</label>
 						<input type="password" class="form-control" id="user-password-repeat" name="password-repeat" required>
 					</div>
 					<input type="hidden" id="user-action" name="action" value="">
+					<input type="hidden" id="user-id" name="id" value="">
 				</form>
 			</div>
 
@@ -118,23 +129,107 @@
 	</div>
 </div>
 
-
 <script type="text/javascript">
+	{% autoescape None %}
+	/**
+	 * Array of users with the following format:
+	 * 	[ { user attributes dictionary }, ... ]
+	 */
+	var users = {{ json_encode(users) }};
+
+	/** Set title of the popup window. */
 	function set_modal_title(title) {
 		document.getElementById('modal-title').innerHTML = title;
 	};
 
+	/**
+	 * Set or unset the checkbox of the specified user right.
+	 * @param right_name Name of the right without
+	 *                   prefix 'user-'.
+	 * @param value      True, if need to set, and else False.
+	 */
+	function set_right(right_name, value) {
+		document.getElementById('user-' + right_name).checked = value;
+	};
+
+	/** Show the clean popup window to create a new user. */
 	function open_modal_to_create_user() {
+		$('#alert-on-error').hide();
 		set_modal_title('Создание пользователя');
 		document.getElementById('user-action').value = 'create';
+		document.getElementById('user-id').value = '';
+		document.getElementById('user-email').value = '';
+		document.getElementById('user-name').value = '';
+		set_right('see_reports', true);
+		set_right('upload_reports', false);
+		set_right('delete_reports', false);
+		set_right('see_users', false);
+		set_right('edit_users', false);
+		var password = document.getElementById('user-password-label');
+		password.innerHTML = 'Пароль:';
+
+		password = document.getElementById('user-password');
+		password.required = true;
+
+		password =
+			document.getElementById('user-password-repeat-label');
+		password.innerHTML = 'Повторите пароль:';
+
+		password = document.getElementById('user-password-repeat');
+		password.required = true;
 		$('#user-modal').modal();
 	};
 
-	function show_alert(text) {
-		$('#alert-on-error').show();
-		$('#alert-on-error-text').text(text);
+	/**
+	 * Show the popup window filled with the user data to edit
+	 * it.
+	 * @param index Index in the users array.
+	 */
+	function open_modal_to_edit_user(index) {
+		$('#alert-on-error').hide();
+		set_modal_title('Редактирование пользователя');
+		document.getElementById('user-action').value = 'edit';
+		var user = users[index];
+		document.getElementById('user-email').value = user['email'];
+		document.getElementById('user-name').value = user['name'];
+		document.getElementById('user-id').value = user['id'];
+		var rights = user['rights'];
+		set_right('see_reports', rights & {{ CAN_SEE_REPORTS }});
+		set_right('upload_reports', rights & {{ CAN_UPLOAD_REPORTS }});
+		set_right('delete_reports', rights & {{ CAN_DELETE_REPORTS }});
+		set_right('see_users', rights & {{ CAN_SEE_USERS }});
+		set_right('edit_users', rights & {{ CAN_EDIT_USERS }});
+		var password = document.getElementById('user-password-label');
+		password.innerHTML = 'Новый пароль (не обязательно):';
+
+		password = document.getElementById('user-password');
+		password.required = false;
+
+		password =
+			document.getElementById('user-password-repeat-label');
+		password.innerHTML = 'Повторите новый пароль (не обязательно):';
+
+		password = document.getElementById('user-password-repeat');
+		password.required = false;
+		$('#user-modal').modal();
 	};
 
+	/**
+	 * Show an error message, if the input in the popup window
+	 * was incorrect.
+	 */
+	function show_alert(text) {
+		document.getElementById('alert-on-error').innerHTML =
+		'<div class="alert alert-danger alert-dismissible">' +
+			'<button type="button" class="close" '+
+				 'data-dismiss="alert">' +
+				'<span aria-hidden="true">&times;</span>' +
+			'</button>' + text +
+		'</div>';
+		$('#alert-on-error').show();
+	};
+
+	/** Restrictions on the user data. */
 	var max_email_length = {{ max_email_len }};
 	var max_name_length = {{ max_name_len }};
 	var min_password_length = {{ min_password_len }};
@@ -142,6 +237,10 @@
 	var email_reg = new RegExp('{{ email_format }}');
 	var name_reg = new RegExp('{{ name_format }}');
 
+	/**
+	 * Send the data of a new user or changed data of an
+	 * edited user.
+	 */
 	function save_user() {
 		$('#alert-on-error').hide();
 		var email    = document.getElementById('user-email').value;
@@ -149,12 +248,16 @@
 		var password = document.getElementById('user-password').value;
 		var password_repeat =
 			document.getElementById('user-password-repeat').value;
-		if (password.length < min_password_length ||
-		    password.length > max_password_length) {
+		var need_password =
+			document.getElementById('user-password').required;
+		if (password.length > 0 || password_repeat.length > 0)
+			need_password = true;
+		if ((password.length < min_password_length ||
+		    password.length > max_password_length) && need_password) {
 			show_alert('{{ password_len_err }}');
 			return;
 		}
-		if (password != password_repeat) {
+		if (password != password_repeat && need_password) {
 			show_alert('{{ password_match_err }}');
 			return;
 		}
@@ -180,10 +283,151 @@
 
 {% end %} {% comment : End of the modal if edit is enabled. %}
 
-<div class="container-fluid">
-	<div class="alert alert-warning alert-dismissible">
-		Раздел просмотра пользователей находится в разработке...
-	</div>
+<div class="container">
+	{% if not is_last_page or page > 1 %}
+		<nav>
+			<ul class="pager">
+				{% if page > 1 %}
+					<li>
+						<a href="/users_management?page={{ page - 1 }}">
+							<span aria-hidden="true">&larr;</span> Назад
+						</a>
+					</li>
+				{% end %}
+				{% if not is_last_page %}
+					<li>
+						<a href="/users_management?page={{ page + 1 }}">
+							Вперед <span aria-hidden="true">&rarr;</span>
+						</a>
+					</li>
+				{% end %}
+			</ul>
+		</nav>
+	{% end %}
+	<table class="table table-striped">
+		<thead>
+			<tr>
+				<th>Почта</th>
+				<th>Имя</th>
+				<th>Права</th>
+				{% if enable_edit %}
+					<th>Действия</th>
+				{% end %}
+			</tr>
+		</thead>
+
+		<tbody>
+			{% for i, user in enumerate(users) %}
+			<tr>
+				<td>{{ user['email'] }}</td>
+				<td>{{ get_val(user, 'name') }}</td>
+				<td>
+					<span class="rights-column">
+					{% if user['rights'] & CAN_UPLOAD_REPORTS %}
+						<span class="rights-icon upload-reports-icon">
+							<span class="glyphicon glyphicon-save-file" aria-hidden="true">
+							</span>
+						</span>
+					{% end %}
+					</span>
+					<span class="rights-column">
+					{% if user['rights'] & CAN_SEE_REPORTS %}
+						<span class="rights-icon see-reports-icon">
+							<span class="glyphicon glyphicon-list-alt" aria-hidden="true">
+							</span>
+						</span>
+					{% end %}
+					</span>
+					<span class="rights-column">
+					{% if user['rights'] & CAN_DELETE_REPORTS %}
+						<span class="rights-icon drop-reports-icon">
+							<span class="glyphicon glyphicon-list-alt" aria-hidden="true">
+							</span>
+							<span class="glyphicon glyphicon-wrench" aria-hidden="true">
+							</span>
+						</span>
+					{% end %}
+					</span>
+					<span class="rights-column">
+					{% if user['rights'] & CAN_SEE_USERS %}
+						<span class="rights-icon see-users-icon">
+							<span class="glyphicon glyphicon-user" aria-hidden="true">
+							</span>
+						</span>
+					{% end %}
+					</span>
+					<span class="rights-column">
+					{% if user['rights'] & CAN_EDIT_USERS %}
+						<span class="rights-icon edit-users-icon">
+							<span class="glyphicon glyphicon-user" aria-hidden="true">
+							</span>
+							<span class="glyphicon glyphicon-wrench" aria-hidden="true">
+							</span>
+						</span>
+					{% end %}
+					</span>
+				</td>
+				{% if enable_edit %}
+					<td class="user-actions">
+						<button onclick="open_modal_to_edit_user({{ i }});" class="btn btn-sm btn-info">
+							<span class="glyphicon glyphicon-edit" aria-hidden="true"></span>
+						</button>
+						<a type="button" href="/users_management?page={{ page }}&action=delete&id={{ user['id'] }}"
+						   class="btn btn-sm btn-danger" onclick="return confirm('{{ CONFIRM_DELETE }}')">
+							<span class="glyphicon glyphicon-trash" aria-hidden="true"></span>
+						</a>
+					</td>
+				{% end %}
+			</tr>
+			{% end %}
+		</tbody>
+	</table>
+	{% if not is_last_page or page > 1 %}
+		<nav>
+			<ul class="pager">
+				{% if page > 1 %}
+					<li>
+						<a href="/users_management?page={{ page - 1 }}">
+							<span aria-hidden="true">&larr;</span> Назад
+						</a>
+					</li>
+				{% end %}
+				{% if not is_last_page %}
+					<li>
+						<a href="/users_management?page={{ page + 1 }}">
+							Вперед <span aria-hidden="true">&rarr;</span>
+						</a>
+					</li>
+				{% end %}
+			</ul>
+		</nav>
+	{% end %}
+</div>
+
+<div class="container-fluid user-rights-designations">
+	<label>Обозначения прав пользователей: </label>
+	<span class="rights-icon upload-reports-icon">
+		<span class="glyphicon glyphicon-save-file" aria-hidden="true"></span>
+		- загрузка отчетов;
+	</span>
+	<span class="rights-icon see-reports-icon">
+		<span class="glyphicon glyphicon-list-alt" aria-hidden="true"></span>
+		- просмотр отчетов и графиков;
+	</span>
+	<span class="rights-icon drop-reports-icon">
+		<span class="glyphicon glyphicon-list-alt" aria-hidden="true"></span>
+		<span class="glyphicon glyphicon-wrench" aria-hidden="true"></span>
+		- удаление отчетов;
+	</span>
+	<span class="rights-icon see-users-icon">
+		<span class="glyphicon glyphicon-user" aria-hidden="true"></span>
+		- просмотр списка пользователей;
+	</span>
+	<span class="rights-icon edit-users-icon">
+		<span class="glyphicon glyphicon-user" aria-hidden="true"></span>
+		<span class="glyphicon glyphicon-wrench" aria-hidden="true"></span>
+		- редактирование и удаление пользователей.
+	</span>
 </div>
 
 {% end %}

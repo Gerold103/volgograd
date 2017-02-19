@@ -10,8 +10,14 @@ import secret_conf as sc
 import application
 from base_handler import BaseHandler, need_rights
 from constants import *
-from query import insert_user
+from query import *
 
+ERR_PAGE_NUMBER = 'Ошибка в указании номера страницы.'
+ERR_USER_ACTION_ID = 'Ошибка в указании идентификатора пользователя. '\
+		     'Идентификатор должен быть целым неотрицательным числом'
+ERR_ACTION = 'Ошибка при выборе действия'
+
+USERS_ON_PAGE = 10
 MAX_NAME_LENGTH = 200
 MAX_EMAIL_LENGTH = 200
 MIN_PASSWORD_LENGTH = 6
@@ -53,15 +59,137 @@ users_management_params = {
 	'password_match_err' : ERR_PASSWORD_MATCH
 }
 
+##
+# Handler to show the site users, its rights, names, emails.
+# Also you can create new users, delete and edit existing.
+#
 class UsersManagementHandler(BaseHandler):
+	##
+	# Render the page with the list of users, fetched from the
+	# database, and commit the transaction.
+	# @param tx     Current transaction.
+	# @param kwargs What actions was made on the previous
+	#               page. For example, if an user was deleted,
+	#               then on next page we need to show message
+	#               about deletion status and remained users.
+	#
 	@tornado.gen.coroutine
-	@need_rights(CAN_SEE_USERS)
+	@need_rights(CAN_EDIT_USERS | CAN_SEE_USERS)
+	def render_page_and_commit(self, tx, **kwargs):
+		page = self.get_argument('page', 1)
+		try:
+			page = int(page)
+			if page <= 0:
+				raise ValueError('Page must be positive '\
+						 'number.')
+		except:
+			self.rollback_error(tx, ERR_PARAMETERS, ERR_PAGE_NUMBER)
+			return
+		try:
+			#
+			# Fetch one more user than need, to check
+			# if we are showing the last page.
+			#
+			limit = USERS_ON_PAGE + 1
+			offset = (page - 1) * USERS_ON_PAGE
+			columns = ['id', 'email', 'name', 'rights']
+			users = yield get_users_range(tx, limit, offset,
+						      columns)
+			count = len(users)
+			if count == 0 and 'user_was_deleted' not in kwargs:
+				self.rollback_error(tx, ERR_PARAMETERS,
+						    ERR_PAGE_NUMBER)
+				return
+			if count == limit:
+				users = users[:-1]
+			self.render('users_management.html', page=page,
+				    **users_management_params, users=users,
+				    is_last_page=(count < limit),
+				    get_val=get_html_val, **kwargs,
+				    CONFIRM_DELETE=CONFIRM_DELETE)
+			yield tx.commit()
+		except:
+			logger.exception('Error during getting users')
+			self.rollback_error(tx, e_hdr=ERR_500)
+			return
+
+	@tornado.gen.coroutine
+	@need_rights(CAN_EDIT_USERS | CAN_SEE_USERS)
 	def get(self):
-		self.render('users_management.html', **users_management_params)
+		action = self.get_argument('action', None)
+		id = self.get_argument('id', None)
+		if action:
+			if not self.check_rights(CAN_EDIT_USERS):
+				return
+			#
+			# It is not allowed to create or edit an
+			# user via GET request.
+			#
+			if action != 'delete':
+				self.render_error(ERR_PARAMETERS, ERR_ACTION)
+				return
+			if id is None:
+				self.render_error(ERR_PARAMETERS,
+						  ERR_USER_ACTION_ID)
+				return
+			try:
+				id = int(id)
+				if id < 0:
+					raise ValueError(ERR_USER_ACTION_ID)
+			except:
+				self.render_error(ERR_PARAMETERS,
+						  ERR_USER_ACTION_ID)
+				return
+		try:
+			tx = yield application.begin()
+		except:
+			logger.exception('Error during getting users')
+			self.rollback_error(tx, e_hdr=ERR_500)
+			return
+		kwargs = { 'user_was_created': False, 'user_was_edited': False,
+			   'user_was_deleted': False }
+		if not action:
+			yield self.render_page_and_commit(tx, **kwargs)
+			return
+		assert(action == 'delete')
+		try:
+			yield delete_user_by_id(tx, id)
+			#
+			# If the user deleted himself, then logout
+			# him by clearing all his cookies.
+			#
+			if id == self.current_user['user_id']:
+				self.clear_all_cookies()
+			kwargs['user_was_deleted'] = True
+		except:
+			logger.exception('Error during deletion of the user '\
+					 'with id: %s' % id)
+			self.rollback_error(tx, e_hdr=ERR_500)
+			return
+		yield self.render_page_and_commit(tx, **kwargs)
 
 	@tornado.gen.coroutine
 	@need_rights(CAN_EDIT_USERS | CAN_SEE_USERS)
 	def post(self):
+		action = self.get_argument('action', None)
+		id = self.get_argument('id', None)
+		#
+		# It is not allowed to delete an user via POST
+		# request.
+		#
+		if action not in ['create', 'edit']:
+			self.render_error(ERR_PARAMETERS, ERR_ACTION)
+			return
+		if action == 'edit':
+			if not self.check_rights(CAN_EDIT_USERS):
+				return
+			try:
+				id = int(id)
+				if id < 0:
+					raise ValueError(ERR_USER_ACTION_ID)
+			except:
+				self.render_error(ERR_PARAMETERS, ERR_USER_ACTION_ID)
+				return
 		#
 		# Check email correctness.
 		#
@@ -92,19 +220,24 @@ class UsersManagementHandler(BaseHandler):
 		#
 		# Check password correctness.
 		#
-		password = self.get_argument('password', None)
-		if password is None:
+		password = self.get_argument('password', '')
+		password_repeat = self.get_argument('password-repeat', '')
+		pass_len = len(password)
+		need_password = action != 'edit' or pass_len > 0 or \
+				len(password_repeat) > 0
+		if pass_len == 0 and need_password:
 			self.render_error(ERR_PARAMETERS, ERR_PASSWORD_ABSENSE)
 			return
-		if len(password) < MIN_PASSWORD_LENGTH or \
-		   len(password) > MAX_PASSWORD_LENGTH:
+		if (pass_len < MIN_PASSWORD_LENGTH or \
+		    pass_len > MAX_PASSWORD_LENGTH) and need_password:
 			self.render_error(ERR_PARAMETERS, ERR_PASSWORD_LENGTH)
 			return
-		password_repeat = self.get_argument('password-repeat', '')
 		if password != password_repeat:
 			self.render_error(ERR_PARAMETERS, ERR_PASSWORD_MATCH)
 			return
-		salt, password_hash = sc.generate_password_hash(password)
+		if need_password:
+			salt, password_hash =\
+				sc.generate_password_hash(password)
 		#
 		# Check mask correctness.
 		#
@@ -132,14 +265,32 @@ class UsersManagementHandler(BaseHandler):
 			self.render_error(ERR_PARAMETERS, msg)
 			return
 		tx = None
+		kwargs = { 'user_was_created': False, 'user_was_edited': False,
+			   'user_was_deleted': False }
 		try:
 			tx = yield application.begin()
-			yield insert_user(tx, email, password_hash, salt, name,
-					  rights_mask)
-			self.render('users_management.html',
-				    user_was_created=True,
-				    **users_management_params)
-			yield tx.commit()
+			if action == 'create':
+				yield insert_user(tx, email, password_hash,
+						  salt, name, rights_mask)
+				kwargs['user_was_created'] = True
+			else:
+				assert(action == 'edit')
+				if need_password:
+					yield update_user(tx, id, email,
+							  password_hash, salt,
+							  name, rights_mask)
+				else:
+					yield update_user(tx, id, email, None,
+							  None, name,
+							  rights_mask)
+				kwargs['user_was_edited'] = True
+				#
+				# If the user edited himself, then
+				# update his cookies.
+				#
+				if id == self.current_user['user_id']:
+					self.update_cookies(rights_mask, name)
+			yield self.render_page_and_commit(tx, **kwargs)
 		except Exception as e:
 			if len(e.args) > 0 and e.args[0] == DUPLICATE_ERROR:
 				msg = 'Пользователь с таким адресом почты '\
