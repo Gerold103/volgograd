@@ -39,17 +39,13 @@ class AAA_TestSuitePrepare(BaseTestSuite):
 					  user['name'], user['rights'])
 
 		for i, user in enumerate(test_users):
-			db_user = yield get_user_by_email(tx, ['id', 'email',
-							       'name', 'rights'],
+			cols = ['id', 'email', 'name', 'rights']
+			db_user = yield get_user_by_email(tx, cols,
 							  user['email'])
-			id = db_user[0]
-			email = db_user[1]
-			name = db_user[2]
-			rights = db_user[3]
-			self.assertEqual(id, i + 1)
-			self.assertEqual(email, user['email'])
-			self.assertEqual(name, user['name'])
-			self.assertEqual(rights, user['rights'])
+			self.assertEqual(db_user['id'], i + 1)
+			self.assertEqual(db_user['email'], user['email'])
+			self.assertEqual(db_user['name'], user['name'])
+			self.assertEqual(db_user['rights'], user['rights'])
 
 		tx.commit()
 

@@ -80,8 +80,8 @@ class LoginHandler(BaseHandler):
 						    	  'таким email не '\
 						    	  'зарегистрирован')
 				return
-			true_password = user[1]
-			salt = user[2]
+			true_password = user['password']
+			salt = user['salt']
 			#
 			# Check that the password is correct.
 			#
@@ -90,9 +90,9 @@ class LoginHandler(BaseHandler):
 				self.rollback_error(tx, e_hdr=ERR_ACCESS,
 						    e_msg='Неправильный пароль')
 				return
-			user_id = user[0]
-			rights = user[3]
-			user_name = user[4]
+			user_id = user['id']
+			rights = user['rights']
+			user_name = user['name']
 			#
 			# Set cookies for the current user for one day.
 			#

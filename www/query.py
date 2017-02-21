@@ -480,19 +480,39 @@ def get_sum_reports_by_month(tx, year, month, cols):
 	return res
 
 ##
+# Create the dictionary of column values with keys same as
+# requested column names.
+# @param tx   Current transaction.
+# @param cols List of requested columns.
+# @param row  A row from the database.
+#
+# @retval Dictionary with keys-columns.
+#
+def process_db_row(tx, cols, row):
+	assert(row)
+	res = {}
+	for i, col in enumerate(cols):
+		res[col] = row[i]
+	return res
+
+##
 # Get a user by the specified email.
 # @param tx    Current transaction.
 # @param cols  List of columns to fetch.
 # @param email Email of the user.
 #
-# @retval Tuple with specified columns or the empty tuple.
+# @retval Dictionary with keys same as requested columns, or None,
+#         if an user was not found.
 #
 @tornado.gen.coroutine
 def get_user_by_email(tx, cols, email):
 	sql = "SELECT {} FROM users WHERE email = %s".format(','.join(cols))
 	params = (email, )
 	cursor = yield tx.execute(query=sql, params=params)
-	return cursor.fetchone()
+	row = cursor.fetchone()
+	if not row:
+		return None
+	return process_db_row(tx, cols, row)
 
 ##
 # Get range of users with the specified offset and limit.
@@ -513,9 +533,7 @@ def get_users_range(tx, limit, offset, cols):
 	row = cursor.fetchone()
 	res = []
 	while row:
-		next = {}
-		for i, col in enumerate(cols):
-			next[col] = row[i]
+		next = process_db_row(tx, cols, row)
 		res.append(next)
 		row = cursor.fetchone()
 	return res
