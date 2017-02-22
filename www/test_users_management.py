@@ -111,6 +111,13 @@ test_error_users = [
 		'password-repeat': '123456',
 		'error': ERR_RIGHTS_COMBINATION,
 	},
+	{# No any rights.
+		'email': 'email@mail.ru',
+		'name': 'John Doe',
+		'password': '123456',
+		'password-repeat': '123456',
+		'error': ERR_RIGHTS_COMBINATION,
+	},
 #
 # Duplicate error
 #

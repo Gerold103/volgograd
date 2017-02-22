@@ -103,6 +103,7 @@ class BaseHandler(tornado.web.RequestHandler):
 		# Rights specifies which actions the user can
 		# execute.
 		#
+		assert(rights)
 		self.set_secure_cookie('rights', str(rights), expires_days=1)
 		if not user_name:
 			self.clear_cookie('user_name')

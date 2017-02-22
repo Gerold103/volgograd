@@ -264,6 +264,11 @@ class UsersManagementHandler(BaseHandler):
 			      ' нужны права на их просмотр'
 			self.render_error(ERR_PARAMETERS, msg)
 			return
+		if rights_mask == 0:
+			msg = ERR_RIGHTS_COMBINATION + ': нельзя оставить '\
+			      'пользователя без прав'
+			self.render_error(ERR_PARAMETERS, msg)
+			return
 		tx = None
 		kwargs = { 'user_was_created': False, 'user_was_edited': False,
 			   'user_was_deleted': False }

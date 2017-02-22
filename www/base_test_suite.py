@@ -262,4 +262,5 @@ class BaseTestSuite(tornado.testing.AsyncHTTPTestCase):
 		body = response.body.decode('utf-8')
 		self.assertIn('logout', body)
 		return { 'headers': headers, 'id': user_id, 'name': user_name,
-			 'rights': rights }
+			 'rights': rights, 'email': email,
+			 'password': password }
