@@ -2,6 +2,12 @@ CREATE DATABASE volgograd;
 
 USE volgograd;
 
+CREATE TABLE users (id INT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
+	email VARCHAR(100), password TEXT, salt VARCHAR(20), name TEXT,
+	rights INT UNSIGNED,
+	UNIQUE (email))
+	CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
 CREATE TABLE reports (id INT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
 	author_id INT UNSIGNED,
 	date DATE,
@@ -18,7 +24,7 @@ CREATE TABLE reports (id INT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
 	forecast_temp_day_to DOUBLE,
 	forecast_temp_night_from DOUBLE,
 	forecast_temp_night_to DOUBLE,
-	FOREIGN KEY (autor_id) REFERENCES users(id) ON DELETE SET NULL,
+	FOREIGN KEY (author_id) REFERENCES users(id) ON DELETE SET NULL,
 	UNIQUE (date)) CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 CREATE TABLE districts (id INT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
@@ -60,10 +66,4 @@ CREATE TABLE boiler_room_reports(id INT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
 	transparency DOUBLE,
 	FOREIGN KEY (boiler_room_id) REFERENCES boiler_rooms(id) ON DELETE CASCADE,
 	FOREIGN KEY (report_id) REFERENCES reports(id) ON DELETE CASCADE)
-	CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
-
-CREATE TABLE users (id INT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
-	email VARCHAR(100), password TEXT, salt VARCHAR(20), name TEXT,
-	rights INT UNSIGNED,
-	UNIQUE (email))
 	CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
